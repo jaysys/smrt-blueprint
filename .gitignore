@@ -7,18 +7,14 @@ dist
 *.log
 *.pid
 server/data
-data-sattie/.run
-data-sattie/data
+data-sattie
 
 # Local secrets and machine-specific config
 .env
 .env.*
 
-# Prevent nested repository metadata from being committed
-data-sattie/.git
-data-sattie/.git.embedded
-data-sattie/venv
-data-sattie/**/__pycache__
+# Python cache artifacts
+__pycache__
 *.pyc
 
 # Generated TypeScript/Vite artifacts
