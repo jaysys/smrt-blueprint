@@ -106,6 +106,11 @@
 | A12 | Done | `Multi Payload Scenario` 화면 포팅 |
 | A13 | Done | 역할 모드와 UI 권한 제어 반영 |
 | A14 | Done | 통합 검증 및 잔여 갭 정리 |
+| A15 | Done | `sattie-skor-tracker` orbit-track 위성 메타 1차 반영 |
+| A16 | Done | orbit-track 활성 위성 카탈로그 2차 확장 |
+| A17 | Done | `sattie-skor-tracker` Orbit Track 화면을 현재 앱 라우트로 포팅 |
+| A18 | Done | 전역 LEO point cloud overlay를 Orbit Track에 병합 |
+| A19 | Done | 한국 위성을 `satellite.js + OMM/TLE` live propagation으로 전환 |
 
 ## 체크리스트
 
@@ -130,6 +135,11 @@
 - [x] `/api/sattie/downloads/:id`
 - [x] `/api/sattie/downloads/:id/save-local`
 - [x] `/api/sattie/images/clear`
+- [x] orbit-track 메타 컬럼 마이그레이션
+- [x] baseline 위성 15종에 orbit-track 메타 병합
+- [x] orbit-track 활성 위성 카탈로그 2차 추가 seed
+- [x] `/api/sattie/orbit-track/leo-backdrop`
+- [x] `/api/sattie/orbit-track/korean-live`
 
 ### 프런트
 
@@ -140,6 +150,10 @@
 - [x] 명령 상태 타임라인/폴링 구성
 - [x] 시나리오 실행 패널 구성
 - [x] 역할별 접근 제어 구성
+- [x] 위성 목록에 orbit-track 메타 표시
+- [x] Orbit Track 전용 탭/라우트와 시각화 패널 추가
+- [x] 전역 LEO point cloud overlay 표시
+- [x] 한국 위성 live propagation overlay 표시
 
 ### 검증
 
@@ -162,6 +176,16 @@
 
 ## 다음 작업
 
-현재 액션 아이템은 모두 완료했다.
+현재 1차 후속 액션 아이템을 완료했다.
 
-- 검증 및 잔여 갭 정리는 [./sattie-verification.md](./sattie-verification.md)에 기록했다.
+- `A15`: 현재 운영 중인 15개 baseline 위성에 대해 `sattie-skor-tracker` orbit-track 메타를 병합했다.
+- 공개 `satellite_id`와 scenario / uplink preset 키는 유지한다.
+- `A16`: orbit-track의 활성 한국 위성 전체를 별도 카탈로그로 확장했다.
+- baseline이 이미 대표하는 위성은 중복 seed하지 않고, 신규 활성 위성만 추가한다.
+- CSV 원본 미반영이던 `LINK`, `SNUSAT-1`, `SNUSAT-1B`, `STSAT 2C`, `OSSI 1`, `STEP CUBE LAB`은 추가 반영했고 `KORSAT-*` alias 제외 정책은 유지한다.
+- `A17`: `sattie-skor-tracker`의 Orbit Track 케이스를 현재 앱 라우트/컴포넌트 구조로 이식했다.
+- `NEXTSAT-1`는 원본 CSV(`NORAD 43811`) 기준 상세 orbit metadata를 재동기화했고, Orbit Track 합성 궤도 계산도 저장된 주기/경사/고도를 우선 사용하도록 보정했다.
+- `KOMPSAT-3A`, `STEP CUBE LAB`, `SpaceEye-T`도 원본 CSV 기준 상세 orbit metadata를 보강했고, Orbit Track 라벨은 근접 위성끼리 자동 분산되도록 조정했다.
+- `A18`: `sattie-skor-tracker/data/leo-live-cache.json`의 전역 LEO 스냅샷을 현재 앱으로 가져와서 비한국 LEO는 원본 스타일 point cloud로, 한국 위성만 궤도선으로 표시하도록 병합했다.
+- `A19`: `sattie-skor-tracker/data/satellite-live-cache.json`과 원본 `satellite.js`를 사용해 한국 위성도 live propagated current/track를 계산하고 Orbit Track 화면에 반영했다.
+- 검증 및 잔여 갭 정리는 [./sattie-verification.md](./sattie-verification.md)에 계속 기록한다.

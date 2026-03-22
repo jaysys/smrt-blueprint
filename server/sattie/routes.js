@@ -1,4 +1,6 @@
 import express from "express";
+import { getKoreanOrbitLiveTracks } from "./koreanOrbitLive.js";
+import { getLeoBackdropPoints } from "./leoBackdrop.js";
 import {
   HttpError,
   clearImages,
@@ -137,6 +139,22 @@ export function createSattieRouter({ db }) {
     const limitRaw = Number.parseInt(String(request.query.limit ?? "100"), 10);
     const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(limitRaw, 500)) : 100;
     response.json(apiCallLogs.slice(0, limit));
+  });
+
+  router.get("/orbit-track/leo-backdrop", async (_request, response) => {
+    try {
+      response.json(await getLeoBackdropPoints());
+    } catch (error) {
+      sendError(response, error);
+    }
+  });
+
+  router.get("/orbit-track/korean-live", async (_request, response) => {
+    try {
+      response.json(await getKoreanOrbitLiveTracks());
+    } catch (error) {
+      sendError(response, error);
+    }
   });
 
   router.get("/satellite-types", async (_request, response) => {

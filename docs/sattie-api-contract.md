@@ -36,9 +36,75 @@ interface Satellite {
   resolution_perf: string | null;
   baseline_status: string | null;
   primary_mission: string | null;
+  tracker_name: string | null;
+  tracker_domestic_name: string | null;
+  norad_cat_id: string | null;
+  object_type: string | null;
+  object_id: string | null;
+  tracker_current: string | null;
+  launch_date: string | null;
+  launch_site: string | null;
+  period_minutes: number | null;
+  inclination_deg: number | null;
+  apogee_km: number | null;
+  perigee_km: number | null;
+  orbit_class: string | null;
+  orbit_label: string | null;
+  orbital_slot: string | null;
+  tracker_source: string | null;
   type: SatelliteType;
   status: SatelliteStatus;
   profile: SatelliteTypeProfile;
+}
+
+interface OrbitBackdropPoint {
+  norad: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  altitude_km: number;
+  source_date: string | null;
+  source_state: string | null;
+}
+
+interface OrbitTrackLeoBackdropResponse {
+  source: string;
+  updated_at: string | null;
+  fetched_at: string | null;
+  generated_at: string;
+  total_count: number;
+  rendered_count: number;
+  points: OrbitBackdropPoint[];
+}
+
+interface OrbitTrackLiveEntry {
+  norad: string;
+  english_name: string | null;
+  domestic_name: string | null;
+  orbit_class: string | null;
+  orbit_label: string | null;
+  source_date: string | null;
+  source_label: string | null;
+  fetched_at: string | null;
+  period_minutes: number;
+  current: {
+    latitude: number;
+    longitude: number;
+    altitudeKm: number;
+  };
+  track: Array<{
+    latitude: number;
+    longitude: number;
+    altitudeKm: number;
+  }>;
+}
+
+interface OrbitTrackKoreanLiveResponse {
+  source: string;
+  updated_at: string | null;
+  generated_at: string;
+  count: number;
+  entries: OrbitTrackLiveEntry[];
 }
 ```
 
@@ -122,6 +188,7 @@ interface Scenario {
 - 브라우저 다운로드 링크는 `/downloads/:id?api_key=...` 쿼리 허용이 필요하다.
 - 역할 모드(`admin`, `operator`, `requestor`)는 서버 권한 모델이 아니라 프런트 시뮬레이션 제어로 우선 구현한다.
 - 응답 필드명은 원본과 동일하게 `snake_case`를 유지한다.
+- `satellite_id`는 기존 scenario / uplink preset 호환성을 위해 유지하고, orbit-track 데이터는 별도 메타 필드로 병합한다.
 
 ## 라우트 목록
 
@@ -131,6 +198,8 @@ interface Scenario {
 | --- | --- | --- |
 | `GET` | `/api/sattie/health` | 헬스 체크 |
 | `GET` | `/api/sattie/monitor/api-calls` | API 호출 로그 조회 |
+| `GET` | `/api/sattie/orbit-track/leo-backdrop` | 전역 LEO point cloud overlay |
+| `GET` | `/api/sattie/orbit-track/korean-live` | 한국 위성 live propagated track |
 
 ### Satellite
 

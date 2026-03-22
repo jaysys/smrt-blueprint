@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Callout, Card, Classes, Dialog, HTMLTable, Icon, Spinner, Tag } from "@blueprintjs/core";
 import { useNavigate } from "react-router-dom";
 import { PanelTitle } from "../components/PanelTitle";
+import { SattieOrbitTrackCanvas } from "../components/SattieOrbitTrackCanvas";
+import { useOrbitTrackScene } from "../hooks/useOrbitTrackScene";
 import { getCommands, getGroundStations, getSattieHealth } from "../lib/sattieApi";
 import type { CommandState, CommandStatus, SattieConsoleBootstrap, SattieHealthResponse } from "../sattie-types";
 
@@ -57,6 +59,7 @@ export function SattieDashboardPage({ bootstrap, darkMode }: SattieDashboardPage
   const [error, setError] = useState<string | null>(null);
   const [healthMessage, setHealthMessage] = useState("No checks executed.");
   const [heroOpen, setHeroOpen] = useState(false);
+  const { visibleEntries, visibleLeoBackdropPoints, summary } = useOrbitTrackScene(bootstrap.satellites);
 
   const commandSummary = useMemo(() => {
     const summary = {
@@ -203,91 +206,132 @@ export function SattieDashboardPage({ bootstrap, darkMode }: SattieDashboardPage
         </Callout>
       ) : null}
 
-      <Card className="panel panel--state-distribution">
-        <div className="panel__title-row">
-          <PanelTitle icon="home">K-Sattie Image Hub</PanelTitle>
-          <Tag minimal intent="primary">
-            Quick Check
-          </Tag>
+      <section className="dashboard-top-grid">
+        <div className="dashboard-top-grid__main">
+          <Card className="panel dashboard-top-grid__panel">
+            <div className="panel__title-row">
+              <PanelTitle icon="home">K-Sattie Image Hub</PanelTitle>
+              <Tag minimal intent="primary">
+                Quick Check
+              </Tag>
+            </div>
+            <div className="button-cluster">
+              <Button icon="pulse" intent="primary" loading={refreshing} onClick={() => void handleHealthCheck()}>
+                Health Check
+              </Button>
+            </div>
+            {loading ? (
+              <div className="panel-loading">
+                <Spinner size={22} />
+                <span>dashboard loading</span>
+              </div>
+            ) : (
+              <Callout icon="info-sign" intent={health.ok ? "success" : "primary"} className="stack-actions">
+                {healthMessage}
+              </Callout>
+            )}
+          </Card>
+
+          <section className="metric-grid dashboard-top-grid__row dashboard-metric-grid dashboard-metric-grid--double">
+            <Card
+              className="metric-card kpi-nav-card"
+              interactive
+              onClick={() => navigate("/satellites#satellite-registry")}
+            >
+              <span className="metric-card__label">
+                <Icon icon="satellite" />
+                <span>Satellites</span>
+              </span>
+              <strong>{health.counts.satellites}</strong>
+              <Tag minimal intent="primary">
+                configuration
+              </Tag>
+            </Card>
+            <Card
+              className="metric-card kpi-nav-card"
+              interactive
+              onClick={() => navigate("/satellites#ground-station-registry")}
+            >
+              <span className="metric-card__label">
+                <Icon icon="antenna" />
+                <span>Ground Stations</span>
+              </span>
+              <strong>{groundStationCount}</strong>
+              <Tag minimal intent="warning">
+                requestors {health.counts.requestors}
+              </Tag>
+            </Card>
+          </section>
+
+          <section className="metric-grid dashboard-top-grid__row dashboard-metric-grid dashboard-metric-grid--triple">
+            <Card className="metric-card kpi-nav-card" interactive onClick={() => navigate("/commands")}>
+              <span className="metric-card__label">
+                <Icon icon="send-to-graph" />
+                <span>Uplink Commands</span>
+              </span>
+              <strong>{commandSummary.total}</strong>
+              <Tag minimal intent="primary">
+                commands
+              </Tag>
+            </Card>
+            <Card className="metric-card kpi-nav-card" interactive onClick={() => navigate("/commands")}>
+              <span className="metric-card__label">
+                <Icon icon="download" />
+                <span>Downlink Ready</span>
+              </span>
+              <strong>{commandSummary.ready}</strong>
+              <Tag minimal intent="success">
+                completed
+              </Tag>
+            </Card>
+            <Card className="metric-card kpi-nav-card" interactive onClick={() => navigate("/commands")}>
+              <span className="metric-card__label">
+                <Icon icon="warning-sign" />
+                <span>Failed</span>
+              </span>
+              <strong>{commandSummary.failed}</strong>
+              <Tag minimal intent={commandSummary.failed > 0 ? "danger" : "success"}>
+                attention
+              </Tag>
+            </Card>
+          </section>
         </div>
-        <div className="button-cluster">
-          <Button icon="pulse" intent="primary" loading={refreshing} onClick={() => void handleHealthCheck()}>
-            Health Check
-          </Button>
-        </div>
-        {loading ? (
-          <div className="panel-loading">
-            <Spinner size={22} />
-            <span>dashboard loading</span>
+
+        <Card
+          className="panel dashboard-orbit-preview-card"
+          interactive
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate("/orbit-track")}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              navigate("/orbit-track");
+            }
+          }}
+        >
+          <div className="panel__title-row">
+            <PanelTitle icon="globe-network">Orbit Track Map</PanelTitle>
+            <Tag minimal intent="success">
+              {summary.koreanLiveCount} Korean satellites
+            </Tag>
           </div>
-        ) : (
-          <Callout icon="info-sign" intent={health.ok ? "success" : "primary"} className="stack-actions">
-            {healthMessage}
-          </Callout>
-        )}
-      </Card>
-
-      <section className="metric-grid">
-        <Card
-          className="metric-card kpi-nav-card"
-          interactive
-          onClick={() => navigate("/satellites#satellite-registry")}
-        >
-          <span className="metric-card__label">
-            <Icon icon="satellite" />
-            <span>Satellites</span>
-          </span>
-          <strong>{health.counts.satellites}</strong>
-          <Tag minimal intent="primary">
-            configuration
-          </Tag>
-        </Card>
-        <Card
-          className="metric-card kpi-nav-card"
-          interactive
-          onClick={() => navigate("/satellites#ground-station-registry")}
-        >
-          <span className="metric-card__label">
-            <Icon icon="antenna" />
-            <span>Ground Stations</span>
-          </span>
-          <strong>{groundStationCount}</strong>
-          <Tag minimal intent="warning">
-            requestors {health.counts.requestors}
-          </Tag>
-        </Card>
-      </section>
-
-      <section className="metric-grid metric-grid--triple metric-grid--compact-triple">
-        <Card className="metric-card kpi-nav-card" interactive onClick={() => navigate("/commands")}>
-          <span className="metric-card__label">
-            <Icon icon="send-to-graph" />
-            <span>Uplink Commands</span>
-          </span>
-          <strong>{commandSummary.total}</strong>
-          <Tag minimal intent="primary">
-            commands
-          </Tag>
-        </Card>
-        <Card className="metric-card kpi-nav-card" interactive onClick={() => navigate("/commands")}>
-          <span className="metric-card__label">
-            <Icon icon="download" />
-            <span>Downlink Ready</span>
-          </span>
-          <strong>{commandSummary.ready}</strong>
-          <Tag minimal intent="success">
-            completed
-          </Tag>
-        </Card>
-        <Card className="metric-card kpi-nav-card" interactive onClick={() => navigate("/commands")}>
-          <span className="metric-card__label">
-            <Icon icon="warning-sign" />
-            <span>Failed</span>
-          </span>
-          <strong>{commandSummary.failed}</strong>
-          <Tag minimal intent={commandSummary.failed > 0 ? "danger" : "success"}>
-            attention
-          </Tag>
+          <div className="dashboard-orbit-preview-card__canvas">
+            <SattieOrbitTrackCanvas
+              entries={visibleEntries}
+              backdropPoints={visibleLeoBackdropPoints}
+              selectedNorad={null}
+              onSelect={() => {}}
+              interactive={false}
+              showNavigation={false}
+              className="orbit-track-globe-shell--dashboard"
+              showLabels={false}
+            />
+          </div>
+          <div className="dashboard-orbit-preview-card__footer">
+            <span>Read only Orbit Track snapshot</span>
+            <span>Click to open full Orbit Track</span>
+          </div>
         </Card>
       </section>
 

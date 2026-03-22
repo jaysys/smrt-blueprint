@@ -6,6 +6,8 @@ import type {
   CreateRequestorPayload,
   CreateSatellitePayload,
   GroundStation,
+  OrbitTrackLeoBackdropResponse,
+  OrbitTrackKoreanLiveResponse,
   Requestor,
   Satellite,
   SatelliteTypeProfilesResponse,
@@ -115,6 +117,14 @@ export function getSattieHealth() {
 
 export function getSatellites() {
   return request<Satellite[]>(`${basePath}/satellites`);
+}
+
+export function getOrbitTrackLeoBackdrop() {
+  return request<OrbitTrackLeoBackdropResponse>(`${basePath}/orbit-track/leo-backdrop`);
+}
+
+export function getOrbitTrackKoreanLive() {
+  return request<OrbitTrackKoreanLiveResponse>(`${basePath}/orbit-track/korean-live`);
 }
 
 export function createSatellite(payload: CreateSatellitePayload) {

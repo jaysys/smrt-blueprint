@@ -48,6 +48,15 @@ export function all(db, sql, params = []) {
   });
 }
 
+async function ensureColumn(db, tableName, columnName, columnDefinition) {
+  const rows = await all(db, `PRAGMA table_info(${tableName})`);
+  if (rows.some((row) => row.name === columnName)) {
+    return;
+  }
+
+  await run(db, `ALTER TABLE ${tableName} ADD COLUMN ${columnDefinition}`);
+}
+
 export async function initSattieDatabase(db) {
   await run(db, "PRAGMA foreign_keys = ON");
 
@@ -64,10 +73,48 @@ export async function initSattieDatabase(db) {
       resolution_perf TEXT,
       baseline_status TEXT,
       primary_mission TEXT,
+      tracker_name TEXT,
+      tracker_domestic_name TEXT,
+      norad_cat_id TEXT,
+      object_type TEXT,
+      object_id TEXT,
+      tracker_current TEXT,
+      launch_date TEXT,
+      launch_site TEXT,
+      period_minutes REAL,
+      inclination_deg REAL,
+      apogee_km REAL,
+      perigee_km REAL,
+      orbit_class TEXT,
+      orbit_label TEXT,
+      orbital_slot TEXT,
+      tracker_source TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     )`,
   );
+
+  await ensureColumn(db, "sattie_satellites", "tracker_name", "tracker_name TEXT");
+  await ensureColumn(
+    db,
+    "sattie_satellites",
+    "tracker_domestic_name",
+    "tracker_domestic_name TEXT",
+  );
+  await ensureColumn(db, "sattie_satellites", "norad_cat_id", "norad_cat_id TEXT");
+  await ensureColumn(db, "sattie_satellites", "object_type", "object_type TEXT");
+  await ensureColumn(db, "sattie_satellites", "object_id", "object_id TEXT");
+  await ensureColumn(db, "sattie_satellites", "tracker_current", "tracker_current TEXT");
+  await ensureColumn(db, "sattie_satellites", "launch_date", "launch_date TEXT");
+  await ensureColumn(db, "sattie_satellites", "launch_site", "launch_site TEXT");
+  await ensureColumn(db, "sattie_satellites", "period_minutes", "period_minutes REAL");
+  await ensureColumn(db, "sattie_satellites", "inclination_deg", "inclination_deg REAL");
+  await ensureColumn(db, "sattie_satellites", "apogee_km", "apogee_km REAL");
+  await ensureColumn(db, "sattie_satellites", "perigee_km", "perigee_km REAL");
+  await ensureColumn(db, "sattie_satellites", "orbit_class", "orbit_class TEXT");
+  await ensureColumn(db, "sattie_satellites", "orbit_label", "orbit_label TEXT");
+  await ensureColumn(db, "sattie_satellites", "orbital_slot", "orbital_slot TEXT");
+  await ensureColumn(db, "sattie_satellites", "tracker_source", "tracker_source TEXT");
 
   await run(
     db,

@@ -56,6 +56,22 @@ CREATE TABLE IF NOT EXISTS sattie_satellites (
   resolution_perf TEXT,
   baseline_status TEXT,
   primary_mission TEXT,
+  tracker_name TEXT,
+  tracker_domestic_name TEXT,
+  norad_cat_id TEXT,
+  object_type TEXT,
+  object_id TEXT,
+  tracker_current TEXT,
+  launch_date TEXT,
+  launch_site TEXT,
+  period_minutes REAL,
+  inclination_deg REAL,
+  apogee_km REAL,
+  perigee_km REAL,
+  orbit_class TEXT,
+  orbit_label TEXT,
+  orbital_slot TEXT,
+  tracker_source TEXT,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -65,6 +81,8 @@ CREATE TABLE IF NOT EXISTS sattie_satellites (
 
 - `internal_satellite_code`: 내부 키 (`sat-xxxx`)
 - `satellite_id`: 외부 공개 ID (`KOMPSAT-3`, `USR-XXXX`)
+- `satellite_id`는 기존 화면 preset과 scenario 키를 보존하기 위해 유지
+- orbit-track 연동 데이터는 `tracker_*`, `norad_cat_id`, `object_id`, `launch_date`, `orbit_*` 컬럼에 별도 저장
 - 이름 중복은 서비스 레이어에서 차단
 
 ### `sattie_ground_stations`
@@ -220,6 +238,9 @@ ON sattie_commands (created_at DESC);
 - domain이 `SAR`이면 `SAR`, 나머지는 `EO_OPTICAL`
 - runtime `status`는 모두 `AVAILABLE`
 - baseline 정보(`eng_model`, `domain`, `resolution_perf`, `baseline_status`, `primary_mission`) 유지
+- `sattie-skor-tracker`에서 확인 가능한 위성은 orbit-track 메타를 함께 병합
+- tracker에 직접 대응값이 없는 baseline 위성은 기존 baseline 정보만 유지하고 orbit-track 메타는 `NULL`
+- 2차 확장에서는 baseline이 이미 대표하는 위성을 제외한 활성 orbit-track 위성을 추가 seed로 적재
 
 ### 지상국 시드
 

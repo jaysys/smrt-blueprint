@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Button,
   Callout,
@@ -7,6 +7,7 @@ import {
   FormGroup,
   HTMLSelect,
   HTMLTable,
+  Icon,
   InputGroup,
   Spinner,
   Tag,
@@ -50,6 +51,18 @@ interface SattieSatellitesPageProps {
   satellites: Satellite[];
 }
 
+type SatelliteSortKey =
+  | "satellite_id"
+  | "name"
+  | "type"
+  | "orbit"
+  | "norad"
+  | "launch"
+  | "status"
+  | "object_type";
+
+type SortDirection = "asc" | "desc";
+
 export function SattieSatellitesPage({
   canManage,
   groundStations: initialGroundStations,
@@ -88,6 +101,17 @@ export function SattieSatellitesPage({
     name: "",
     ground_station_id: "",
   });
+  const [satelliteFilters, setSatelliteFilters] = useState({
+    satellite_id: "",
+    name: "",
+    type: "ALL",
+    orbit: "ALL",
+    norad: "",
+    launch: "",
+    status: "ALL",
+  });
+  const [satelliteSortKey, setSatelliteSortKey] = useState<SatelliteSortKey>("name");
+  const [satelliteSortDirection, setSatelliteSortDirection] = useState<SortDirection>("asc");
 
   useEffect(() => {
     setSatellites(initialSatellites);
@@ -217,6 +241,114 @@ export function SattieSatellitesPage({
     editingRequestorId != null
       ? requestors.find((item) => item.requestor_id === editingRequestorId) ?? null
       : null;
+  const filteredSatellites = useMemo(
+    () =>
+      satellites.filter((satellite) => {
+        const idMatch =
+          !satelliteFilters.satellite_id ||
+          satellite.satellite_id.toLowerCase().includes(satelliteFilters.satellite_id.toLowerCase());
+        const nameMatch =
+          !satelliteFilters.name || satellite.name.toLowerCase().includes(satelliteFilters.name.toLowerCase());
+        const typeMatch = satelliteFilters.type === "ALL" || satellite.type === satelliteFilters.type;
+        const orbitMatch =
+          satelliteFilters.orbit === "ALL" || (satellite.orbit_label ?? "UNSPECIFIED") === satelliteFilters.orbit;
+        const noradMatch =
+          !satelliteFilters.norad ||
+          (satellite.norad_cat_id ?? "").toLowerCase().includes(satelliteFilters.norad.toLowerCase());
+        const launchMatch =
+          !satelliteFilters.launch ||
+          (satellite.launch_date ?? "").toLowerCase().includes(satelliteFilters.launch.toLowerCase());
+        const statusMatch = satelliteFilters.status === "ALL" || satellite.status === satelliteFilters.status;
+
+        return idMatch && nameMatch && typeMatch && orbitMatch && noradMatch && launchMatch && statusMatch;
+      }),
+    [satelliteFilters, satellites],
+  );
+  const sortedSatellites = useMemo(() => {
+    const rows = filteredSatellites.slice();
+    const direction = satelliteSortDirection === "asc" ? 1 : -1;
+
+    const getComparableValue = (satellite: Satellite) => {
+      switch (satelliteSortKey) {
+        case "satellite_id":
+          return satellite.satellite_id;
+        case "name":
+          return satellite.name;
+        case "type":
+          return satellite.type;
+        case "orbit":
+          return satellite.orbit_label ?? "";
+        case "norad":
+          return satellite.norad_cat_id ? Number.parseInt(satellite.norad_cat_id, 10) : -1;
+        case "launch": {
+          const parsed = satellite.launch_date ? Date.parse(satellite.launch_date) : Number.NaN;
+          return Number.isFinite(parsed) ? parsed : -1;
+        }
+        case "status":
+          return satellite.status;
+        case "object_type":
+          return satellite.object_type ?? "";
+        default:
+          return satellite.name;
+      }
+    };
+
+    rows.sort((left, right) => {
+      const leftValue = getComparableValue(left);
+      const rightValue = getComparableValue(right);
+
+      if (typeof leftValue === "string" && typeof rightValue === "string") {
+        const compared = leftValue.localeCompare(rightValue, "ko");
+        return compared === 0 ? left.name.localeCompare(right.name, "ko") : compared * direction;
+      }
+
+      const safeLeft = typeof leftValue === "number" ? leftValue : -1;
+      const safeRight = typeof rightValue === "number" ? rightValue : -1;
+
+      if (safeLeft === safeRight) {
+        return left.name.localeCompare(right.name, "ko");
+      }
+
+      return (safeLeft - safeRight) * direction;
+    });
+
+    return rows;
+  }, [filteredSatellites, satelliteSortDirection, satelliteSortKey]);
+
+  function handleSatelliteSort(nextSortKey: SatelliteSortKey) {
+    if (satelliteSortKey === nextSortKey) {
+      setSatelliteSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSatelliteSortKey(nextSortKey);
+    setSatelliteSortDirection(
+      nextSortKey === "satellite_id" ||
+        nextSortKey === "name" ||
+        nextSortKey === "type" ||
+        nextSortKey === "orbit" ||
+        nextSortKey === "status" ||
+        nextSortKey === "object_type"
+        ? "asc"
+        : "desc",
+    );
+  }
+
+  function renderSatelliteSortHeader(label: string, key: SatelliteSortKey) {
+    const isActive = satelliteSortKey === key;
+    const icon = !isActive ? "sort" : satelliteSortDirection === "asc" ? "sort-asc" : "sort-desc";
+
+    return (
+      <button
+        type="button"
+        className={`sort-header ${isActive ? "is-active" : ""}`}
+        onClick={() => handleSatelliteSort(key)}
+      >
+        <span>{label}</span>
+        <Icon icon={icon} size={12} />
+      </button>
+    );
+  }
 
   async function handleSeedSatellites() {
     await runAction(async () => {
@@ -586,30 +718,135 @@ export function SattieSatellitesPage({
               A08
             </Tag>
           </div>
+          <div className="table-filters">
+            <InputGroup
+              small
+              placeholder="Filter ID"
+              value={satelliteFilters.satellite_id}
+              onValueChange={(value) =>
+                setSatelliteFilters((current) => ({ ...current, satellite_id: value }))
+              }
+            />
+            <InputGroup
+              small
+              placeholder="Filter Name"
+              value={satelliteFilters.name}
+              onValueChange={(value) =>
+                setSatelliteFilters((current) => ({ ...current, name: value }))
+              }
+            />
+            <HTMLSelect
+              fill
+              value={satelliteFilters.type}
+              onChange={(event) =>
+                setSatelliteFilters((current) => ({ ...current, type: event.target.value }))
+              }
+              options={[
+                { label: "All Types", value: "ALL" },
+                { label: "EO_OPTICAL", value: "EO_OPTICAL" },
+                { label: "SAR", value: "SAR" },
+              ]}
+            />
+            <HTMLSelect
+              fill
+              value={satelliteFilters.orbit}
+              onChange={(event) =>
+                setSatelliteFilters((current) => ({ ...current, orbit: event.target.value }))
+              }
+              options={[
+                { label: "All Orbits", value: "ALL" },
+                { label: "LEO", value: "LEO" },
+                { label: "LEO SSO", value: "LEO SSO" },
+                { label: "GEO", value: "GEO" },
+                { label: "Lunar orbit", value: "Lunar orbit" },
+                { label: "Unspecified", value: "UNSPECIFIED" },
+              ]}
+            />
+            <InputGroup
+              small
+              placeholder="Filter NORAD"
+              value={satelliteFilters.norad}
+              onValueChange={(value) =>
+                setSatelliteFilters((current) => ({ ...current, norad: value }))
+              }
+            />
+            <InputGroup
+              small
+              placeholder="Filter Launch"
+              value={satelliteFilters.launch}
+              onValueChange={(value) =>
+                setSatelliteFilters((current) => ({ ...current, launch: value }))
+              }
+            />
+            <HTMLSelect
+              fill
+              value={satelliteFilters.status}
+              onChange={(event) =>
+                setSatelliteFilters((current) => ({ ...current, status: event.target.value }))
+              }
+              options={[
+                { label: "All Statuses", value: "ALL" },
+                { label: "AVAILABLE", value: "AVAILABLE" },
+                { label: "MAINTENANCE", value: "MAINTENANCE" },
+              ]}
+            />
+            <div className="table-filters__meta">
+              <Tag minimal intent="primary">
+                {filteredSatellites.length} / {satellites.length}
+              </Tag>
+              <Button
+                minimal
+                small
+                onClick={() =>
+                  setSatelliteFilters({
+                    satellite_id: "",
+                    name: "",
+                    type: "ALL",
+                    orbit: "ALL",
+                    norad: "",
+                    launch: "",
+                    status: "ALL",
+                  })
+                }
+              >
+                Reset
+              </Button>
+            </div>
+          </div>
           <div className="table-wrap">
             <HTMLTable bordered interactive striped className="data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Profile</th>
+                  <th>{renderSatelliteSortHeader("ID", "satellite_id")}</th>
+                  <th>{renderSatelliteSortHeader("Name", "name")}</th>
+                  <th>{renderSatelliteSortHeader("Type", "type")}</th>
+                  <th>{renderSatelliteSortHeader("Orbit", "orbit")}</th>
+                  <th>{renderSatelliteSortHeader("NORAD", "norad")}</th>
+                  <th>{renderSatelliteSortHeader("Launch", "launch")}</th>
+                  <th>{renderSatelliteSortHeader("Status", "status")}</th>
+                  <th>{renderSatelliteSortHeader("Object Type", "object_type")}</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {satellites.map((satellite) => (
+                {sortedSatellites.map((satellite) => (
                   <tr key={satellite.satellite_id}>
                     <td>{satellite.satellite_id}</td>
                     <td>{satellite.name}</td>
                     <td>{satellite.type}</td>
                     <td>
+                      {satellite.orbit_label ?? "-"}
+                      <br />
+                      <span className="subtle-text">{satellite.tracker_name ?? satellite.eng_model ?? "-"}</span>
+                    </td>
+                    <td>{satellite.norad_cat_id ?? "-"}</td>
+                    <td>{satellite.launch_date ?? "-"}</td>
+                    <td>
                       <span className={satellite.status === "AVAILABLE" ? "text-success" : "text-danger"}>
                         {satellite.status}
                       </span>
                     </td>
-                    <td>{satellite.profile.default_product_type}</td>
+                    <td>{satellite.object_type ?? "-"}</td>
                     <td>
                       <div className="action-row">
                         <Button minimal small onClick={() => setEditingSatelliteId(satellite.satellite_id)}>
@@ -636,6 +873,13 @@ export function SattieSatellitesPage({
                     </td>
                   </tr>
                 ))}
+                {sortedSatellites.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="subtle-text">
+                      No satellites match the current filters.
+                    </td>
+                  </tr>
+                ) : null}
               </tbody>
             </HTMLTable>
           </div>

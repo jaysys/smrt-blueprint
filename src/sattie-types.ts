@@ -30,6 +30,22 @@ export interface Satellite {
   resolution_perf: string | null;
   baseline_status: string | null;
   primary_mission: string | null;
+  tracker_name: string | null;
+  tracker_domestic_name: string | null;
+  norad_cat_id: string | null;
+  object_type: string | null;
+  object_id: string | null;
+  tracker_current: string | null;
+  launch_date: string | null;
+  launch_site: string | null;
+  period_minutes: number | null;
+  inclination_deg: number | null;
+  apogee_km: number | null;
+  perigee_km: number | null;
+  orbit_class: string | null;
+  orbit_label: string | null;
+  orbital_slot: string | null;
+  tracker_source: string | null;
   type: SatelliteType;
   status: SatelliteStatus;
   profile: SatelliteTypeProfile;
@@ -224,4 +240,54 @@ export interface SattieConsoleBootstrap {
   requestors: Requestor[];
   scenarios: Scenario[];
   satelliteTypes: SatelliteTypeProfilesResponse;
+}
+
+export interface OrbitBackdropPoint {
+  norad: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  altitude_km: number;
+  source_date: string | null;
+  source_state: string | null;
+}
+
+export interface OrbitTrackLeoBackdropResponse {
+  source: string;
+  updated_at: string | null;
+  fetched_at: string | null;
+  generated_at: string;
+  total_count: number;
+  rendered_count: number;
+  points: OrbitBackdropPoint[];
+}
+
+export interface OrbitTrackLiveEntry {
+  norad: string;
+  english_name: string | null;
+  domestic_name: string | null;
+  orbit_class: string | null;
+  orbit_label: string | null;
+  source_date: string | null;
+  source_label: string | null;
+  fetched_at: string | null;
+  period_minutes: number;
+  current: {
+    latitude: number;
+    longitude: number;
+    altitudeKm: number;
+  };
+  track: Array<{
+    latitude: number;
+    longitude: number;
+    altitudeKm: number;
+  }>;
+}
+
+export interface OrbitTrackKoreanLiveResponse {
+  source: string;
+  updated_at: string | null;
+  generated_at: string;
+  count: number;
+  entries: OrbitTrackLiveEntry[];
 }

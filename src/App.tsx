@@ -20,6 +20,7 @@ import { PanelTitle } from "./components/PanelTitle";
 import { getSattieBootstrap } from "./lib/sattieApi";
 import { SattieCommandsPage } from "./pages/SattieCommandsPage";
 import { SattieDashboardPage } from "./pages/SattieDashboardPage";
+import { SattieOrbitTrackPage } from "./pages/SattieOrbitTrackPage";
 import { SattiePerformancePage } from "./pages/SattiePerformancePage";
 import { SattiePayloadMonitoringPage } from "./pages/SattiePayloadMonitoringPage";
 import { SattieSatellitesPage } from "./pages/SattieSatellitesPage";
@@ -95,10 +96,10 @@ export function App() {
         <Navbar className="topbar">
           <NavbarGroup align="left" className="topbar__brand">
             <NavbarHeading>
-              <span className="brand-title">
+              <NavLink to="/dashboard" className="brand-title" end>
                 <Icon icon="satellite" />
                 <span>K-Sattie Image Hub</span>
-              </span>
+              </NavLink>
             </NavbarHeading>
             <NavbarDivider />
             <Tag minimal round large>
@@ -160,6 +161,16 @@ export function App() {
                     <span className="rail-link__meta">satellite, station, requestor resources</span>
                   </NavLink>
                 ) : null}
+                <NavLink
+                  to="/orbit-track"
+                  className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
+                >
+                  <span className="rail-link__title">
+                    <Icon icon="globe-network" />
+                    <span>Orbit Track</span>
+                  </span>
+                  <span className="rail-link__meta">korean satellite orbit browser and map</span>
+                </NavLink>
                 <NavLink
                   to="/performance"
                   className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
@@ -313,7 +324,7 @@ export function App() {
               </Card>
             ) : bootstrap ? (
               <Routes>
-                <Route path="/" element={<Navigate to="/performance" replace />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route
                   path="/dashboard"
                   element={<SattieDashboardPage bootstrap={bootstrap} darkMode={darkMode} />}
@@ -333,6 +344,10 @@ export function App() {
                       <Navigate to="/dashboard" replace />
                     )
                   }
+                />
+                <Route
+                  path="/orbit-track"
+                  element={<SattieOrbitTrackPage satellites={bootstrap.satellites} />}
                 />
                 <Route
                   path="/performance"
@@ -396,7 +411,7 @@ export function App() {
         <div className={Classes.DIALOG_BODY}>
           <ol className="dialog-list">
             <li>`/api/sattie/*` 백엔드와 연결되는 프런트 타입과 API 계층을 추가했다.</li>
-            <li>라우트는 Dashboard, Satellites, Performance, Uplink, Commands, Scenarios로 재편했다.</li>
+            <li>라우트는 Dashboard, Satellites, Orbit Track, Performance, Uplink, Commands, Scenarios로 재편했다.</li>
             <li>mock role mode(`admin`, `operator`, `requestor`)가 헤더와 메뉴 접근에 반영된다.</li>
           </ol>
         </div>
