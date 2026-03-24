@@ -10,6 +10,7 @@ import {
   deriveExternalCenter,
   fileExists,
   renderExternalMapPng,
+  renderExternalMapPreviewPng,
   writeExternalMapImage,
   writeOpticalImage,
   writeSarImage,
@@ -1080,7 +1081,7 @@ export async function previewExternalMap(query) {
   }
 
   try {
-    return renderExternalMapPng({
+    return renderExternalMapPreviewPng({
       centerLat: Math.max(-90, Math.min(90, lat)),
       centerLon: Math.max(-180, Math.min(180, lon)),
       zoom: clampInt(query?.zoom, 0, 19, 14),

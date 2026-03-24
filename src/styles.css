@@ -880,6 +880,10 @@ textarea {
   align-items: start;
 }
 
+.uplink-grid--preview-emphasis {
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+}
+
 .uplink-submit-row {
   display: flex;
   justify-content: center;
@@ -1184,6 +1188,36 @@ textarea {
   gap: 14px;
 }
 
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.preview-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(20, 32, 43, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.preview-zoom-btn.bp6-button {
+  border-radius: 999px;
+}
+
+.preview-zoom-level {
+  min-width: 68px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  color: #204863;
+}
+
 .preview-frame {
   overflow: hidden;
   border-radius: 16px;
@@ -1223,7 +1257,7 @@ textarea {
 .map-preview {
   width: 100%;
   aspect-ratio: 16 / 9;
-  min-height: 420px;
+  min-height: 520px;
   max-height: 720px;
   object-fit: cover;
   border-radius: 16px;
@@ -1243,6 +1277,15 @@ textarea {
   background:
     linear-gradient(135deg, rgba(72, 175, 240, 0.12), rgba(61, 204, 145, 0.12)),
     rgba(255, 255, 255, 0.04);
+}
+
+.bp6-dark .preview-zoom-controls {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(16, 22, 31, 0.72);
+}
+
+.bp6-dark .preview-zoom-level {
+  color: #d8e1e8;
 }
 
 .bp6-dark .simulator-block {
@@ -1649,6 +1692,10 @@ textarea {
   .map-preview {
     aspect-ratio: 4 / 3;
     min-height: 320px;
+  }
+
+  .uplink-grid--preview-emphasis {
+    grid-template-columns: 1fr;
   }
 
   .form-inline--triple {

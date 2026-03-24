@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { createCanvas, GlobalFonts, loadImage } from "@napi-rs/canvas";
+import { getKoreanOrbitLiveTracks } from "./koreanOrbitLive.js";
 
 const imageDir = path.resolve("server", "data", "sattie", "images");
 const pngSignature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -24,6 +25,12 @@ const FOOTER_FONT_PATHS = [
   path.resolve("node_modules", "@fontsource", "noto-sans-kr", "files", "noto-sans-kr-latin-400-normal.woff"),
   path.resolve("node_modules", "@fontsource", "noto-sans-kr", "files", "noto-sans-kr-latin-700-normal.woff"),
 ];
+const ORBIT_OVERLAY_COLORS = {
+  leo: ["#ff9f68", "#ffd166", "#7bdff2", "#9bdeac", "#8bd0ff", "#f497b6"],
+  geo: ["#65d4a8", "#8bd0ff", "#c7ceea", "#f1a66a"],
+  meo: ["#d7a9ff", "#a0c4ff", "#caffbf", "#fdffb6"],
+  cislunar: ["#f7b267", "#f79d65", "#f4845f", "#f27059"],
+};
 
 let footerFontsReady = false;
 
@@ -34,6 +41,23 @@ export function ensureSattieImageDir() {
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
+}
+
+function hashValue(value) {
+  return String(value)
+    .split("")
+    .reduce((acc, char) => ((acc * 31 + char.charCodeAt(0)) >>> 0), 7);
+}
+
+function hexToRgba(hex, alpha) {
+  const normalized = String(hex ?? "").replace("#", "").trim();
+  if (normalized.length !== 6) {
+    return hex;
+  }
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 function ensureFooterFonts() {
@@ -677,6 +701,14 @@ function latlonToTile(lat, lon, zoom) {
   return { tileX, tileY };
 }
 
+function latlonToWorldPixel(lat, lon, zoom) {
+  const { tileX, tileY } = latlonToTile(lat, lon, zoom);
+  return {
+    x: tileX * 256,
+    y: tileY * 256,
+  };
+}
+
 function deriveCenterFromRequestProfile(requestProfile) {
   const center = requestProfile?.aoi_center;
   if (center?.lat != null && center?.lon != null) {
@@ -719,6 +751,193 @@ async function fetchTileOsm(zoom, x, y) {
   }
 
   return decodePngToRgb(Buffer.from(await response.arrayBuffer()));
+}
+
+function buildExternalMapLayout({ centerLat, centerLon, zoom, width, height }) {
+  const { tileX, tileY } = latlonToTile(centerLat, centerLon, zoom);
+  const baseTileX = Math.trunc(tileX);
+  const baseTileY = Math.trunc(tileY);
+  const pixelX = Math.trunc((tileX - baseTileX) * 256) + 256;
+  const pixelY = Math.trunc((tileY - baseTileY) * 256) + 256;
+  const cropSize = 512;
+  const mosaicWidth = 256 * 3;
+  const mosaicHeight = 256 * 3;
+  const left = Math.max(0, Math.min(mosaicWidth - cropSize, pixelX - cropSize / 2));
+  const top = Math.max(0, Math.min(mosaicHeight - cropSize, pixelY - cropSize / 2));
+
+  return {
+    zoom,
+    width,
+    height,
+    cropSize,
+    baseTileX,
+    baseTileY,
+    left,
+    top,
+    topLeftWorldX: (baseTileX - 1) * 256 + left,
+    topLeftWorldY: (baseTileY - 1) * 256 + top,
+    worldSize: 256 * (2 ** zoom),
+  };
+}
+
+function wrapWorldXToViewport(worldX, layout) {
+  let wrapped = worldX;
+  const viewportCenterX = layout.topLeftWorldX + layout.cropSize / 2;
+  while (wrapped - viewportCenterX > layout.worldSize / 2) {
+    wrapped -= layout.worldSize;
+  }
+  while (wrapped - viewportCenterX < -layout.worldSize / 2) {
+    wrapped += layout.worldSize;
+  }
+  return wrapped;
+}
+
+function worldPixelToImagePoint(worldPoint, layout) {
+  const wrappedX = wrapWorldXToViewport(worldPoint.x, layout);
+  return {
+    x: ((wrappedX - layout.topLeftWorldX) / layout.cropSize) * layout.width,
+    y: ((worldPoint.y - layout.topLeftWorldY) / layout.cropSize) * layout.height,
+  };
+}
+
+function isImagePointVisible(point, layout, padding = 18) {
+  return (
+    point.x >= -padding &&
+    point.x <= layout.width + padding &&
+    point.y >= -padding &&
+    point.y <= layout.height + padding
+  );
+}
+
+function drawSatelliteOverlay(ctx, layout, orbitPayload) {
+  ensureFooterFonts();
+  const entries = Array.isArray(orbitPayload?.entries) ? orbitPayload.entries : [];
+  const labelCandidates = [];
+  let visibleCount = 0;
+
+  for (const entry of entries) {
+    const orbitClass = String(entry.orbit_class ?? "").toLowerCase();
+    if (orbitClass === "geo") {
+      continue;
+    }
+    const rawTrack = Array.isArray(entry.track) ? entry.track : [];
+    const trackMid = Math.floor(rawTrack.length / 2);
+    const trackRadius = orbitClass === "meo" ? 8 : 10;
+    const focusedTrack = rawTrack.slice(
+      Math.max(0, trackMid - trackRadius),
+      Math.min(rawTrack.length, trackMid + trackRadius + 1),
+    );
+    const trackPoints = focusedTrack.map((point) => worldPixelToImagePoint(
+      latlonToWorldPixel(point.latitude, point.longitude, layout.zoom),
+      layout,
+    ));
+
+    const currentPoint = entry.current
+      ? worldPixelToImagePoint(
+          latlonToWorldPixel(entry.current.latitude, entry.current.longitude, layout.zoom),
+          layout,
+        )
+      : null;
+
+    const hasVisibleTrack = trackPoints.some((point) => isImagePointVisible(point, layout, 28));
+    const hasVisibleCurrent = currentPoint ? isImagePointVisible(currentPoint, layout, 28) : false;
+    if (!hasVisibleTrack && !hasVisibleCurrent) {
+      continue;
+    }
+
+    visibleCount += 1;
+    const orbitPalette = ORBIT_OVERLAY_COLORS[orbitClass] ?? ORBIT_OVERLAY_COLORS.leo;
+    const orbitColor = orbitPalette[hashValue(entry.norad ?? entry.english_name ?? "") % orbitPalette.length];
+    const strokeColor = hexToRgba(orbitColor, 0.94);
+    const glowColor = hexToRgba(orbitColor, 0.22);
+
+    if (trackPoints.length >= 2) {
+      ctx.save();
+      ctx.lineWidth = entry.english_name === "SpaceEye-T" ? 1.35 : 1.05;
+      ctx.strokeStyle = strokeColor;
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = 5;
+      ctx.setLineDash([13, 8]);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      let previousPoint = null;
+      for (const point of trackPoints) {
+        if (
+          previousPoint &&
+          (Math.abs(point.x - previousPoint.x) > layout.width * 0.6 ||
+            Math.abs(point.y - previousPoint.y) > layout.height * 0.6)
+        ) {
+          ctx.stroke();
+          ctx.beginPath();
+          previousPoint = null;
+        }
+
+        if (!previousPoint) {
+          ctx.moveTo(point.x, point.y);
+        } else {
+          ctx.lineTo(point.x, point.y);
+        }
+        previousPoint = point;
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    if (currentPoint && hasVisibleCurrent) {
+      ctx.save();
+      ctx.fillStyle = strokeColor;
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+      ctx.shadowColor = glowColor;
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(currentPoint.x, currentPoint.y, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(currentPoint.x, currentPoint.y, 7.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      labelCandidates.push({
+        x: currentPoint.x + 8,
+        y: currentPoint.y - 8,
+        text: String(entry.english_name ?? entry.domestic_name ?? entry.norad ?? "Unknown"),
+      });
+    }
+  }
+
+  const labels = labelCandidates
+    .filter((item) => item.x < layout.width - 12 && item.y > 14 && item.y < layout.height - 6)
+    .slice(0, 8);
+
+  if (labels.length > 0) {
+    ctx.save();
+    ctx.font = `600 9px "${FOOTER_FONT_FAMILY}"`;
+    ctx.textBaseline = "middle";
+    for (const label of labels) {
+      const metrics = ctx.measureText(label.text);
+      const labelWidth = Math.min(metrics.width + 10, layout.width - label.x - 4);
+      drawRoundedRect(ctx, label.x - 3, label.y - 8, labelWidth, 15, 7);
+      ctx.fillStyle = "rgba(9, 20, 29, 0.72)";
+      ctx.fill();
+      ctx.fillStyle = "#f5fbff";
+      ctx.fillText(label.text, label.x + 2, label.y);
+    }
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.font = `700 12px "${FOOTER_FONT_FAMILY}"`;
+  ctx.textBaseline = "top";
+  drawRoundedRect(ctx, 10, 10, 168, 24, 10);
+  ctx.fillStyle = "rgba(7, 17, 28, 0.66)";
+  ctx.fill();
+  ctx.fillStyle = "#f2fbff";
+  ctx.fillText(`Korean satellites in view: ${visibleCount}`, 20, 16);
+  ctx.restore();
 }
 
 function blitRgb(source, sourceWidth, sourceHeight, destination, destinationWidth, xOffset, yOffset) {
@@ -788,15 +1007,13 @@ async function buildExternalMapRgb({
     throw new Error(`Unsupported external_map_source: ${mapSource}`);
   }
 
-  const { tileX, tileY } = latlonToTile(centerLat, centerLon, zoom);
-  const baseTileX = Math.trunc(tileX);
-  const baseTileY = Math.trunc(tileY);
+  const layout = buildExternalMapLayout({ centerLat, centerLon, zoom, width, height });
   const tiles = await Promise.all(
     [-1, 0, 1].flatMap((dy) =>
       [-1, 0, 1].map(async (dx) => ({
         dx,
         dy,
-        tile: await fetchTileOsm(zoom, baseTileX + dx, baseTileY + dy),
+        tile: await fetchTileOsm(zoom, layout.baseTileX + dx, layout.baseTileY + dy),
       })),
     ),
   );
@@ -812,20 +1029,27 @@ async function buildExternalMapRgb({
     blitRgb(tile.rgbData, tile.width, tile.height, mosaic, mosaicWidth, (dx + 1) * 256, (dy + 1) * 256);
   }
 
-  const pixelX = Math.trunc((tileX - baseTileX) * 256) + 256;
-  const pixelY = Math.trunc((tileY - baseTileY) * 256) + 256;
-  const cropSize = 512;
-  const left = Math.max(0, Math.min(mosaicWidth - cropSize, pixelX - cropSize / 2));
-  const top = Math.max(0, Math.min(mosaicHeight - cropSize, pixelY - cropSize / 2));
-  const cropped = cropRgb(mosaic, mosaicWidth, left, top, cropSize, cropSize);
-  const resized = resizeRgbBilinear(cropped, cropSize, cropSize, width, height);
+  const cropped = cropRgb(mosaic, mosaicWidth, layout.left, layout.top, layout.cropSize, layout.cropSize);
+  const resized = resizeRgbBilinear(cropped, layout.cropSize, layout.cropSize, width, height);
 
-  return { width, height, rgbData: resized };
+  return { width, height, rgbData: resized, layout };
 }
 
 export async function renderExternalMapPng(options) {
   const externalMap = await buildExternalMapRgb(options);
   return encodeRgbPng(externalMap.width, externalMap.height, externalMap.rgbData);
+}
+
+export async function renderExternalMapPreviewPng(options) {
+  const externalMap = await buildExternalMapRgb(options);
+  const basePng = encodeRgbPng(externalMap.width, externalMap.height, externalMap.rgbData);
+  const orbitPayload = await getKoreanOrbitLiveTracks();
+  const canvas = createCanvas(externalMap.width, externalMap.height);
+  const ctx = canvas.getContext("2d");
+  const mapImage = await loadImage(basePng);
+  ctx.drawImage(mapImage, 0, 0, externalMap.width, externalMap.height);
+  drawSatelliteOverlay(ctx, externalMap.layout, orbitPayload);
+  return canvas.toBuffer("image/png");
 }
 
 export async function writeExternalMapImage(filePath, options) {

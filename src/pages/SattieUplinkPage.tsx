@@ -647,23 +647,28 @@ export function SattieUplinkPage({
     setPreviewRequested(true);
   }
 
+  function adjustPreviewZoom(delta: number) {
+    setPreviewRequested(true);
+    setForm((current) => {
+      const currentZoom = Math.max(0, Math.min(19, parseInteger(current.external_map_zoom, 14)));
+      const nextZoom = Math.max(0, Math.min(19, currentZoom + delta));
+      if (nextZoom === currentZoom) {
+        return current;
+      }
+      return {
+        ...current,
+        external_map_zoom: String(nextZoom),
+      };
+    });
+  }
+
   function handlePreviewWheel(event: ReactWheelEvent<HTMLDivElement>) {
     if (previewUrl == null) {
       return;
     }
 
     event.preventDefault();
-    const currentZoom = Math.max(0, Math.min(19, parseInteger(form.external_map_zoom, 14)));
-    const direction = event.deltaY < 0 ? 1 : -1;
-    const nextZoom = Math.max(0, Math.min(19, currentZoom + direction));
-    if (nextZoom === currentZoom) {
-      return;
-    }
-
-    setForm((current) => ({
-      ...current,
-      external_map_zoom: String(nextZoom),
-    }));
+    adjustPreviewZoom(event.deltaY < 0 ? 1 : -1);
   }
 
   function handlePreviewPointerDown(event: ReactPointerEvent<HTMLDivElement>) {
@@ -1033,7 +1038,7 @@ export function SattieUplinkPage({
         </Button>
       </section>
 
-      <section className="uplink-grid uplink-grid--double">
+      <section className="uplink-grid uplink-grid--double uplink-grid--preview-emphasis">
         <Card className="panel">
           <div className="panel__title-row">
             <PanelTitle icon="cube">위성촬영모사(Delivery/Generation)</PanelTitle>
@@ -1141,9 +1146,30 @@ export function SattieUplinkPage({
         <Card className="panel panel--preview">
           <div className="panel__title-row">
             <PanelTitle icon="globe-network">External Map Preview</PanelTitle>
-            <Tag minimal intent="primary">
-              OSM
-            </Tag>
+            <div className="preview-toolbar">
+              <Tag minimal intent="primary">
+                OSM
+              </Tag>
+              <div className="preview-zoom-controls" role="group" aria-label="External preview zoom controls">
+                <Button
+                  className="preview-zoom-btn"
+                  disabled={form.generation_mode !== "EXTERNAL" || previewZoom <= 0}
+                  icon="minus"
+                  minimal
+                  onClick={() => adjustPreviewZoom(-1)}
+                  small
+                />
+                <span className="preview-zoom-level">Zoom {previewZoom}</span>
+                <Button
+                  className="preview-zoom-btn"
+                  disabled={form.generation_mode !== "EXTERNAL" || previewZoom >= 19}
+                  icon="plus"
+                  minimal
+                  onClick={() => adjustPreviewZoom(1)}
+                  small
+                />
+              </div>
+            </div>
           </div>
           <div className="preview-meta">{previewMessage}</div>
           {previewUrl ? (
