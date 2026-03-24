@@ -62,10 +62,16 @@ type PreviewDragState = {
   zoom: number;
 };
 
+const KOREA_PREVIEW_HOME = {
+  lat: 36.2,
+  lon: 127.8,
+  zoom: 7,
+};
+
 const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> = {
   "KOMPSAT-3": {
-    mission_name: "국토 정사영상 갱신",
-    aoi_name: "수도권",
+    mission_name: "서울-인천 수도권 정사영상 갱신",
+    aoi_name: "서울-인천 수도권",
     aoi_center_lat: "37.56",
     aoi_center_lon: "126.98",
     aoi_bbox: "126.75,37.40,127.22,37.72",
@@ -81,8 +87,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "KOMPSAT-3A": {
-    mission_name: "야간 산불 열원 탐지",
-    aoi_name: "강원 산림",
+    mission_name: "강원 동부 산림 야간 열원 탐지",
+    aoi_name: "강원 동부 산림",
     aoi_center_lat: "37.75",
     aoi_center_lon: "128.45",
     aoi_bbox: "128.05,37.45,128.85,38.05",
@@ -98,8 +104,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "KOMPSAT-7": {
-    mission_name: "도시변화 탐지",
-    aoi_name: "부산 도심",
+    mission_name: "부산 도심-항만 변화 탐지",
+    aoi_name: "부산 도심-항만권",
     aoi_center_lat: "35.1796",
     aoi_center_lon: "129.0756",
     aoi_bbox: "128.92,35.05,129.23,35.31",
@@ -115,8 +121,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "KOMPSAT-5": {
-    mission_name: "홍수지역 SAR 판독",
-    aoi_name: "낙동강 하류",
+    mission_name: "낙동강 하류 홍수 범람 SAR 판독",
+    aoi_name: "낙동강 하류 범람권",
     aoi_center_lat: "35.15",
     aoi_center_lon: "128.95",
     aoi_bbox: "128.65,34.95,129.20,35.35",
@@ -134,8 +140,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "KOMPSAT-6": {
-    mission_name: "정밀 레이더 표적 재식별",
-    aoi_name: "동해 연안",
+    mission_name: "동해 북부 연안 정밀 표적 재식별",
+    aoi_name: "동해 북부 연안",
     aoi_center_lat: "37.48",
     aoi_center_lon: "129.19",
     aoi_bbox: "128.95,37.15,129.45,37.75",
@@ -153,8 +159,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "GK-2A": {
-    mission_name: "태풍 실황 추적",
-    aoi_name: "한반도 남해",
+    mission_name: "남해상 태풍 구름대 실황 추적",
+    aoi_name: "한반도 남해상",
     aoi_center_lat: "34.35",
     aoi_center_lon: "127.95",
     aoi_bbox: "127.10,33.75,128.80,34.95",
@@ -170,8 +176,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "GK-2B": {
-    mission_name: "미세먼지 이동 추적",
-    aoi_name: "서해-수도권",
+    mission_name: "서해 유입 미세먼지 이동 추적",
+    aoi_name: "서해-수도권 유입축",
     aoi_center_lat: "36.95",
     aoi_center_lon: "126.10",
     aoi_bbox: "125.40,36.20,126.90,37.55",
@@ -187,8 +193,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "425-PROJECT-1": {
-    mission_name: "전략표적 EO/IR 감시",
-    aoi_name: "북부 접경",
+    mission_name: "연천-철원 북부 접경 EO/IR 감시",
+    aoi_name: "연천-철원 북부 접경",
     aoi_center_lat: "38.12",
     aoi_center_lon: "127.05",
     aoi_bbox: "126.75,37.90,127.35,38.35",
@@ -204,8 +210,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "425-PROJECT-2": {
-    mission_name: "악천후 표적 감시",
-    aoi_name: "중부 접경",
+    mission_name: "화천-양구 중부 접경 악천후 감시",
+    aoi_name: "화천-양구 중부 접경",
     aoi_center_lat: "38.05",
     aoi_center_lon: "127.55",
     aoi_bbox: "127.20,37.85,127.95,38.25",
@@ -221,8 +227,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "425-PROJECT-3": {
-    mission_name: "SAR 군집 재방문 감시",
-    aoi_name: "동부 산악",
+    mission_name: "강릉-평창 동부 산악 재방문 감시",
+    aoi_name: "강릉-평창 동부 산악",
     aoi_center_lat: "37.66",
     aoi_center_lon: "128.55",
     aoi_bbox: "128.05,37.28,129.02,38.02",
@@ -240,8 +246,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "425-PROJECT-4": {
-    mission_name: "SAR 군집 재방문 감시",
-    aoi_name: "동부 산악",
+    mission_name: "태백-삼척 산악 축선 재방문 감시",
+    aoi_name: "태백-삼척 산악 축선",
     aoi_center_lat: "37.64",
     aoi_center_lon: "128.62",
     aoi_bbox: "128.12,37.24,129.06,38.00",
@@ -259,8 +265,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "425-PROJECT-5": {
-    mission_name: "SAR 군집 재방문 감시",
-    aoi_name: "동부 산악",
+    mission_name: "설악-인제 산악 축선 재방문 감시",
+    aoi_name: "설악-인제 산악 축선",
     aoi_center_lat: "37.70",
     aoi_center_lon: "128.48",
     aoi_bbox: "128.00,37.32,128.96,38.06",
@@ -278,8 +284,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "CAS500-1": {
-    mission_name: "국토 자원 관리",
-    aoi_name: "전라 농경지",
+    mission_name: "전남 평야 농경지 자원 관리",
+    aoi_name: "전남 평야 농경지",
     aoi_center_lat: "35.05",
     aoi_center_lon: "126.9",
     aoi_bbox: "126.55,34.75,127.3,35.35",
@@ -295,8 +301,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   "CAS500-2": {
-    mission_name: "재난 대응 표준 관측",
-    aoi_name: "충청 내륙",
+    mission_name: "충청 내륙 재난 대응 표준 관측",
+    aoi_name: "충청 내륙 관측권",
     aoi_center_lat: "36.55",
     aoi_center_lon: "127.45",
     aoi_bbox: "127.0,36.2,127.9,36.9",
@@ -312,8 +318,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
     fail_probability: "0.03",
   },
   NEONSAT: {
-    mission_name: "초소형 군집 모니터링",
-    aoi_name: "수도권 순환",
+    mission_name: "수도권 순환 변화 모니터링",
+    aoi_name: "성남-수원 수도권 순환권",
     aoi_center_lat: "37.45",
     aoi_center_lon: "127.15",
     aoi_bbox: "126.8,37.1,127.6,37.8",
@@ -333,8 +339,8 @@ const UPLINK_PRESETS_BY_SATELLITE_ID: Record<string, Partial<UplinkFormState>> =
 function getTypeFallbackPreset(type: Satellite["type"]): Partial<UplinkFormState> {
   if (type === "SAR") {
     return {
-      mission_name: "SAR 촬영 임무",
-      aoi_name: "기본 SAR 촬영지역",
+      mission_name: "강원 산악 SAR 기본 촬영 임무",
+      aoi_name: "강원 산악 기본 SAR 촬영권",
       aoi_center_lat: "37.55",
       aoi_center_lon: "128.45",
       aoi_bbox: "128.00,37.20,128.90,37.90",
@@ -355,8 +361,8 @@ function getTypeFallbackPreset(type: Satellite["type"]): Partial<UplinkFormState
   }
 
   return {
-    mission_name: "EO 촬영 임무",
-    aoi_name: "기본 EO 촬영지역",
+    mission_name: "충청 내륙 EO 기본 촬영 임무",
+    aoi_name: "충청 내륙 기본 EO 촬영권",
     aoi_center_lat: "36.35",
     aoi_center_lon: "127.38",
     aoi_bbox: "126.90,36.00,127.85,36.75",
@@ -645,6 +651,16 @@ export function SattieUplinkPage({
 
   function handlePreviewExternalMap() {
     setPreviewRequested(true);
+  }
+
+  function resetPreviewToKoreaHome() {
+    setPreviewRequested(true);
+    setForm((current) => ({
+      ...current,
+      aoi_center_lat: KOREA_PREVIEW_HOME.lat.toFixed(4),
+      aoi_center_lon: KOREA_PREVIEW_HOME.lon.toFixed(4),
+      external_map_zoom: String(KOREA_PREVIEW_HOME.zoom),
+    }));
   }
 
   function adjustPreviewZoom(delta: number) {
@@ -1151,6 +1167,14 @@ export function SattieUplinkPage({
                 OSM
               </Tag>
               <div className="preview-zoom-controls" role="group" aria-label="External preview zoom controls">
+                <Button
+                  className="preview-zoom-btn"
+                  disabled={form.generation_mode !== "EXTERNAL"}
+                  icon="home"
+                  minimal
+                  onClick={resetPreviewToKoreaHome}
+                  small
+                />
                 <Button
                   className="preview-zoom-btn"
                   disabled={form.generation_mode !== "EXTERNAL" || previewZoom <= 0}
