@@ -442,6 +442,7 @@ async function runCommandPipeline(db, commandId) {
           }
 
           const imagePath = buildImageFilePath(commandId);
+          const imageCreatedAt = nowIso();
           const requestProfile = parseJson(capturing.request_profile_json, {});
           const generationMode = requestProfile?.generation?.mode ?? "INTERNAL";
           if (generationMode === "EXTERNAL") {
@@ -457,6 +458,7 @@ async function runCommandPipeline(db, commandId) {
             missionName: capturing.mission_name,
             aoiName: capturing.aoi_name,
             latLon: formatLatLon(footerCenter),
+            imageCreatedAt,
             groundStation: requestProfile?.ground_station?.name ?? null,
             requestor: requestProfile?.requestor?.name ?? null,
           });

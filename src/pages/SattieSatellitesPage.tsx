@@ -509,7 +509,7 @@ export function SattieSatellitesPage({
 
         <Card className="panel panel--resource-status">
           <div className="panel__title-row">
-            <PanelTitle icon="endorsed">Seed 주입 for POC</PanelTitle>
+            <PanelTitle icon="endorsed">시뮬레이션 POC 데이터 주입</PanelTitle>
             <Button
               minimal
               icon={seedActionsOpen ? "chevron-up" : "chevron-down"}

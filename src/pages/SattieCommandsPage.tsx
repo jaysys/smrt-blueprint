@@ -253,7 +253,7 @@ export function SattieCommandsPage({ onDataChange, satellites }: SattieCommandsP
       <section className="page-intro">
         <div className="page-intro__copy">
           <p className="eyebrow">Commands Monitor</p>
-          <h1>Uplink Command Tracker</h1>
+          <h1>Command Tracking</h1>
           <p className="page-copy">
             command 단건 조회, auto poll, 상태 타임라인, rerun, save-local, download 흐름을
             한 화면에서 추적하는 콘솔이다.

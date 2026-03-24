@@ -214,30 +214,53 @@ function wrapText(ctx, text, maxWidth, maxLines = 2) {
   return lines.slice(0, maxLines);
 }
 
-function getFooterRowLayout(width) {
+function getFooterColumns(width) {
   if (width >= 960) {
-    return [3, 3];
+    return 3;
   }
   if (width >= 640) {
-    return [2, 2, 2];
+    return 2;
   }
-  return [1, 1, 1, 1, 1, 1];
+  return 1;
+}
+
+function formatFooterKst(value) {
+  if (!value) {
+    return "-";
+  }
+
+  const parsed = Date.parse(String(value));
+  if (!Number.isFinite(parsed)) {
+    return String(value);
+  }
+
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = Object.fromEntries(
+    formatter
+      .formatToParts(new Date(parsed))
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  );
+
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second} KST`;
 }
 
 function buildFooterCells(width, items) {
   const padding = clamp(Math.round(width * 0.022 * DECORATION_SCALE), 8, 12);
   const gap = clamp(Math.round(width * 0.014 * DECORATION_SCALE), 5, 8);
-  const rowLayout = getFooterRowLayout(width);
   const rows = [];
-  let cursor = 0;
-
-  for (const count of rowLayout) {
-    const rowItems = items.slice(cursor, cursor + count);
-    if (rowItems.length === 0) {
-      break;
-    }
-    rows.push(rowItems);
-    cursor += count;
+  const columns = getFooterColumns(width);
+  for (let cursor = 0; cursor < items.length; cursor += columns) {
+    rows.push(items.slice(cursor, cursor + columns));
   }
 
   const labelFontSize = clamp(Math.round(width * 0.014 * DECORATION_SCALE), 10, 11);
@@ -849,6 +872,7 @@ export async function appendImageMetadataFooter(filePath, metadata) {
     { label: "Mission Name", value: normalizeFooterValue(metadata?.missionName) },
     { label: "AOI Name", value: normalizeFooterValue(metadata?.aoiName) },
     { label: "Lat/Lon", value: normalizeFooterValue(metadata?.latLon) },
+    { label: "Image Created At (KST)", value: formatFooterKst(metadata?.imageCreatedAt) },
     { label: "Ground Station", value: normalizeFooterValue(metadata?.groundStation) },
     { label: "Requestor", value: normalizeFooterValue(metadata?.requestor) },
   ];

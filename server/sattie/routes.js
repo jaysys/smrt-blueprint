@@ -1,6 +1,9 @@
 import express from "express";
+import redoc from "redoc-express";
+import swaggerUi from "swagger-ui-express";
 import { getKoreanOrbitLiveTracks } from "./koreanOrbitLive.js";
 import { getLeoBackdropPoints } from "./leoBackdrop.js";
+import { createSattieOpenApiSpec } from "./openapi.js";
 import {
   HttpError,
   clearImages,
@@ -35,6 +38,7 @@ import {
 
 const API_LOG_LIMIT = 300;
 const apiCallLogs = [];
+const openApiSpec = createSattieOpenApiSpec();
 
 function sendError(response, error) {
   if (error instanceof HttpError) {
@@ -74,7 +78,13 @@ export function createSattieRouter({ db }) {
   const router = express.Router();
 
   router.use((request, response, next) => {
-    if (request.path === "/monitor/api-calls") {
+    if (
+      request.path === "/monitor/api-calls" ||
+      request.path === "/monitor/api-calls/clear" ||
+      request.path === "/openapi.json" ||
+      request.path.startsWith("/docs") ||
+      request.path.startsWith("/redoc")
+    ) {
       next();
       return;
     }
@@ -140,6 +150,42 @@ export function createSattieRouter({ db }) {
     const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(limitRaw, 500)) : 100;
     response.json(apiCallLogs.slice(0, limit));
   });
+
+  router.post("/monitor/api-calls/clear", async (_request, response) => {
+    const clearedCount = apiCallLogs.length;
+    apiCallLogs.length = 0;
+    response.json({ cleared_count: clearedCount });
+  });
+
+  router.get("/openapi.json", (_request, response) => {
+    response.json(openApiSpec);
+  });
+
+  router.use(
+    "/docs",
+    swaggerUi.serve,
+    swaggerUi.setup(openApiSpec, {
+      explorer: true,
+      customSiteTitle: "K-Sattie Image Hub API Docs",
+      swaggerOptions: {
+        persistAuthorization: true,
+        displayRequestDuration: true,
+      },
+    }),
+  );
+
+  router.get(
+    "/redoc",
+    redoc({
+      title: "K-Sattie Image Hub API ReDoc",
+      specUrl: "/api/sattie/openapi.json",
+      redocOptions: {
+        hideDownloadButton: false,
+        expandResponses: "200,201,400",
+        pathInMiddlePanel: true,
+      },
+    }),
+  );
 
   router.get("/orbit-track/leo-backdrop", async (_request, response) => {
     try {

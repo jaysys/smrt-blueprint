@@ -115,6 +115,12 @@ export function getSattieHealth() {
   return request<SattieHealthResponse>(`${basePath}/health`);
 }
 
+export function clearApiCallLogs() {
+  return request<{ cleared_count: number }>(`${basePath}/monitor/api-calls/clear`, {
+    method: "POST",
+  });
+}
+
 export function getSatellites() {
   return request<Satellite[]>(`${basePath}/satellites`);
 }

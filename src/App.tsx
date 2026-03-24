@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  AnchorButton,
   Button,
   Callout,
   Card,
@@ -413,6 +414,31 @@ export function App() {
             <li>라우트는 Dashboard, Satellites, Orbit Track, Performance, Uplink, Commands, Scenarios로 재편했다.</li>
             <li>mock role mode(`admin`, `operator`, `requestor`)가 헤더와 메뉴 접근에 반영된다.</li>
           </ol>
+          <div className="dialog-docs">
+            <div className="dialog-docs__header">
+              <strong>API 문서 바로가기</strong>
+              <span className="subtle-text">구조 설명 확인 후 바로 문서 화면으로 이동할 수 있다.</span>
+            </div>
+            <div className="dialog-docs__actions">
+              <AnchorButton
+                href="/api/sattie/docs"
+                target="_blank"
+                rel="noreferrer"
+                icon="document-open"
+                intent="primary"
+              >
+                Swagger Docs
+              </AnchorButton>
+              <AnchorButton
+                href="/api/sattie/redoc"
+                target="_blank"
+                rel="noreferrer"
+                icon="manual"
+              >
+                ReDoc
+              </AnchorButton>
+            </div>
+          </div>
         </div>
         <div className={Classes.DIALOG_FOOTER}>
           <div className={Classes.DIALOG_FOOTER_ACTIONS}>

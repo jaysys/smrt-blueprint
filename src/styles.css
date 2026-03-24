@@ -1776,6 +1776,31 @@ textarea {
   padding-left: 20px;
 }
 
+.dialog-docs {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid rgba(20, 32, 43, 0.1);
+  border-radius: 14px;
+  background: rgba(20, 32, 43, 0.04);
+}
+
+.dialog-docs__header {
+  display: grid;
+  gap: 4px;
+}
+
+.dialog-docs__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dialog-docs__actions .bp6-button {
+  min-width: 140px;
+}
+
 .orbit-track-panel {
   display: grid;
   gap: 14px;

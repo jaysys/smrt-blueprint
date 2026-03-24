@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Callout, Card, FormGroup, HTMLTable, InputGroup, Tag } from "@blueprintjs/core";
 import { PanelTitle } from "../components/PanelTitle";
 import {
+  clearApiCallLogs,
   clearImages,
   getApiCallLogs,
   getSattieApiConfig,
@@ -93,9 +94,16 @@ export function SattiePayloadMonitoringPage() {
     }
   }
 
-  function handleClearLogs() {
-    setLogs([]);
-    setMessage("Recent API Calls view cleared.");
+  async function handleClearLogs() {
+    setError(null);
+    setMessage(null);
+    try {
+      const response = await clearApiCallLogs();
+      setLogs([]);
+      setMessage(`Recent API Calls cleared: ${response.cleared_count}`);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Clear logs failed");
+    }
   }
 
   return (
@@ -170,7 +178,7 @@ export function SattiePayloadMonitoringPage() {
           <Button icon="trash" intent="warning" onClick={() => void handleClearImages()}>
             Clear Images
           </Button>
-          <Button icon="clean" onClick={handleClearLogs}>
+          <Button icon="clean" onClick={() => void handleClearLogs()}>
             Clear Logs
           </Button>
         </div>
