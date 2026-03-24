@@ -9,6 +9,21 @@ PID_FILE="$PID_DIR/${APP_NAME_SAFE}.pid"
 LOG_FILE="$PID_DIR/${APP_NAME_SAFE}.log"
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-6005}"
+DEPS_STAMP_FILE="$ROOT_DIR/node_modules/.deps-stamp"
+
+compute_deps_stamp() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$ROOT_DIR/package.json" "$ROOT_DIR/package-lock.json" | sha256sum | awk '{print $1}'
+    return
+  fi
+
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$ROOT_DIR/package.json" "$ROOT_DIR/package-lock.json" | shasum -a 256 | awk '{print $1}'
+    return
+  fi
+
+  node -e "const fs=require('fs');const crypto=require('crypto');const hash=crypto.createHash('sha256');hash.update(fs.readFileSync(process.argv[1]));hash.update(fs.readFileSync(process.argv[2]));process.stdout.write(hash.digest('hex'));" "$ROOT_DIR/package.json" "$ROOT_DIR/package-lock.json"
+}
 
 mkdir -p "$PID_DIR"
 
@@ -16,6 +31,19 @@ if [[ ! -d "$ROOT_DIR/node_modules" ]]; then
   echo "[ERROR] node_modules not found"
   echo "Run ./one-shot-setup.sh first."
   exit 1
+fi
+
+CURRENT_DEPS_STAMP="$(compute_deps_stamp)"
+INSTALLED_DEPS_STAMP="$(cat "$DEPS_STAMP_FILE" 2>/dev/null || true)"
+
+if [[ "$CURRENT_DEPS_STAMP" != "$INSTALLED_DEPS_STAMP" ]]; then
+  echo "[INFO] dependency manifest changed. installing updated dependencies..."
+  (
+    cd "$ROOT_DIR"
+    npm install
+  )
+  mkdir -p "$ROOT_DIR/node_modules"
+  printf '%s\n' "$CURRENT_DEPS_STAMP" > "$DEPS_STAMP_FILE"
 fi
 
 if [[ ! -f "$ROOT_DIR/dist/index.html" ]]; then
