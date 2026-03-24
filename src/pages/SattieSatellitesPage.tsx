@@ -3,6 +3,8 @@ import {
   Button,
   Callout,
   Card,
+  Classes,
+  Collapse,
   Dialog,
   FormGroup,
   HTMLSelect,
@@ -45,6 +47,7 @@ import type {
 
 interface SattieSatellitesPageProps {
   canManage: boolean;
+  darkMode: boolean;
   groundStations: GroundStation[];
   onDataChange?: () => Promise<void> | void;
   requestors: Requestor[];
@@ -65,6 +68,7 @@ type SortDirection = "asc" | "desc";
 
 export function SattieSatellitesPage({
   canManage,
+  darkMode,
   groundStations: initialGroundStations,
   onDataChange,
   requestors: initialRequestors,
@@ -85,6 +89,8 @@ export function SattieSatellitesPage({
   const [editingSatelliteId, setEditingSatelliteId] = useState<string | null>(null);
   const [editingGroundStationId, setEditingGroundStationId] = useState<string | null>(null);
   const [editingRequestorId, setEditingRequestorId] = useState<string | null>(null);
+  const [seedActionsOpen, setSeedActionsOpen] = useState(false);
+  const [createFormsOpen, setCreateFormsOpen] = useState(false);
 
   const [satelliteForm, setSatelliteForm] = useState({
     name: "",
@@ -503,35 +509,53 @@ export function SattieSatellitesPage({
 
         <Card className="panel panel--resource-status">
           <div className="panel__title-row">
-            <PanelTitle icon="endorsed">Seed Actions for PoC</PanelTitle>
-            <Tag minimal intent="primary">
-              API
-            </Tag>
-          </div>
-          <div className="button-cluster">
-            <Button loading={busy} onClick={handleSeedSatellites}>
-              Setup Initial Mock Satellites
-            </Button>
-            <Button loading={busy} disabled={!canManage} onClick={handleSeedGroundStations}>
-              Setup Initial Mock Ground Stations
-            </Button>
-            <Button loading={busy} disabled={!canManage} onClick={handleSeedRequestors}>
-              Setup Initial Mock Requestors
-            </Button>
-            <Button loading={busy} onClick={handleShowSatelliteTypes}>
-              Show Satellite Types Available
+            <PanelTitle icon="endorsed">Seed 주입 for POC</PanelTitle>
+            <Button
+              minimal
+              icon={seedActionsOpen ? "chevron-up" : "chevron-down"}
+              onClick={() => setSeedActionsOpen((current) => !current)}
+            >
+              {seedActionsOpen ? "접기" : "펼치기"}
             </Button>
           </div>
-          {!canManage ? (
-            <Callout icon="lock" intent="warning" className="stack-actions">
-              현재 모드에서는 생성/수정/삭제 같은 인프라 관리 기능을 사용할 수 없다.
-            </Callout>
-          ) : null}
+          <Collapse isOpen={seedActionsOpen}>
+            <div className="button-cluster">
+              <Button loading={busy} onClick={handleSeedSatellites}>
+                Setup Initial Mock Satellites
+              </Button>
+              <Button loading={busy} disabled={!canManage} onClick={handleSeedGroundStations}>
+                Setup Initial Mock Ground Stations
+              </Button>
+              <Button loading={busy} disabled={!canManage} onClick={handleSeedRequestors}>
+                Setup Initial Mock Requestors
+              </Button>
+              <Button loading={busy} onClick={handleShowSatelliteTypes}>
+                Show Satellite Types Available
+              </Button>
+            </div>
+            {!canManage ? (
+              <Callout icon="lock" intent="warning" className="stack-actions">
+                현재 모드에서는 생성/수정/삭제 같은 인프라 관리 기능을 사용할 수 없다.
+              </Callout>
+            ) : null}
+          </Collapse>
         </Card>
       </section>
 
-      <section className="uplink-grid uplink-grid--triple resource-create-grid">
-        <Card className="panel panel--seed-actions">
+      <Card className="panel resource-create-cluster">
+        <div className="panel__title-row">
+          <PanelTitle icon="add">Create Resources</PanelTitle>
+          <Button
+            minimal
+            icon={createFormsOpen ? "chevron-up" : "chevron-down"}
+            onClick={() => setCreateFormsOpen((current) => !current)}
+          >
+            {createFormsOpen ? "접기" : "펼치기"}
+          </Button>
+        </div>
+        <Collapse isOpen={createFormsOpen}>
+          <section className="uplink-grid uplink-grid--triple resource-create-grid">
+            <Card className="panel panel--seed-actions">
           <div className="panel__title-row">
             <PanelTitle icon="satellite">Create Satellite</PanelTitle>
             <Tag minimal intent="success">
@@ -583,9 +607,9 @@ export function SattieSatellitesPage({
               Create Satellite
             </Button>
           </div>
-        </Card>
+            </Card>
 
-        <Card className="panel">
+            <Card className="panel">
           <div className="panel__title-row">
             <PanelTitle icon="antenna">Create Ground Station</PanelTitle>
             <Tag minimal intent="primary">
@@ -649,9 +673,9 @@ export function SattieSatellitesPage({
               Create Ground Station
             </Button>
           </div>
-        </Card>
+            </Card>
 
-        <Card className="panel">
+            <Card className="panel">
           <div className="panel__title-row">
             <PanelTitle icon="user">Create Requestor</PanelTitle>
             <Tag minimal intent="warning">
@@ -692,23 +716,10 @@ export function SattieSatellitesPage({
               Create Requestor
             </Button>
           </div>
-        </Card>
-      </section>
-
-      <section>
-        <Card className="panel">
-          <div className="panel__title-row">
-            <PanelTitle icon="edit">Update Selected</PanelTitle>
-            <Tag minimal intent="success">
-              Dialog
-            </Tag>
-          </div>
-          <p className="page-copy page-copy--tight">
-            각 테이블의 `Edit` 링크를 누르면 수정 다이얼로그가 열린다. 삭제는 즉시 서버에
-            반영된다.
-          </p>
-        </Card>
-      </section>
+            </Card>
+          </section>
+        </Collapse>
+      </Card>
 
       <section>
         <Card className="panel">
@@ -1047,6 +1058,7 @@ export function SattieSatellitesPage({
       <EditSatelliteDialog
         satellite={editingSatellite}
         busy={busy}
+        darkMode={darkMode}
         onClose={() => setEditingSatelliteId(null)}
         onSave={(payload) =>
           canManage
@@ -1067,6 +1079,7 @@ export function SattieSatellitesPage({
       <EditGroundStationDialog
         groundStation={editingGroundStation}
         busy={busy}
+        darkMode={darkMode}
         onClose={() => setEditingGroundStationId(null)}
         onSave={(payload) =>
           canManage
@@ -1088,6 +1101,7 @@ export function SattieSatellitesPage({
         requestor={editingRequestor}
         groundStations={groundStations}
         busy={busy}
+        darkMode={darkMode}
         onClose={() => setEditingRequestorId(null)}
         onSave={(payload) =>
           canManage
@@ -1110,12 +1124,13 @@ export function SattieSatellitesPage({
 
 interface EditSatelliteDialogProps {
   busy: boolean;
+  darkMode: boolean;
   onClose: () => void;
   onSave: (payload: { name: string; type: SatelliteType; status: SatelliteStatus }) => Promise<void>;
   satellite: Satellite | null;
 }
 
-function EditSatelliteDialog({ satellite, onClose, onSave, busy }: EditSatelliteDialogProps) {
+function EditSatelliteDialog({ satellite, onClose, onSave, busy, darkMode }: EditSatelliteDialogProps) {
   const [name, setName] = useState("");
   const [type, setType] = useState<SatelliteType>("EO_OPTICAL");
   const [status, setStatus] = useState<SatelliteStatus>("AVAILABLE");
@@ -1130,7 +1145,12 @@ function EditSatelliteDialog({ satellite, onClose, onSave, busy }: EditSatellite
   }, [satellite]);
 
   return (
-    <Dialog isOpen={satellite != null} title="Edit Satellite" onClose={onClose}>
+    <Dialog
+      className={`resource-edit-dialog ${darkMode ? Classes.DARK : ""}`}
+      isOpen={satellite != null}
+      title="Edit Satellite"
+      onClose={onClose}
+    >
       <div className="bp6-dialog-body form-stack">
         <FormGroup label="Name">
           <InputGroup value={name} onValueChange={setName} />
@@ -1170,6 +1190,7 @@ function EditSatelliteDialog({ satellite, onClose, onSave, busy }: EditSatellite
 
 interface EditGroundStationDialogProps {
   busy: boolean;
+  darkMode: boolean;
   groundStation: GroundStation | null;
   onClose: () => void;
   onSave: (payload: { name: string; status: GroundStationStatus; location: string | null }) => Promise<void>;
@@ -1180,6 +1201,7 @@ function EditGroundStationDialog({
   onClose,
   onSave,
   busy,
+  darkMode,
 }: EditGroundStationDialogProps) {
   const [name, setName] = useState("");
   const [status, setStatus] = useState<GroundStationStatus>("OPERATIONAL");
@@ -1195,7 +1217,12 @@ function EditGroundStationDialog({
   }, [groundStation]);
 
   return (
-    <Dialog isOpen={groundStation != null} title="Edit Ground Station" onClose={onClose}>
+    <Dialog
+      className={`resource-edit-dialog ${darkMode ? Classes.DARK : ""}`}
+      isOpen={groundStation != null}
+      title="Edit Ground Station"
+      onClose={onClose}
+    >
       <div className="bp6-dialog-body form-stack">
         <FormGroup label="Name">
           <InputGroup value={name} onValueChange={setName} />
@@ -1231,6 +1258,7 @@ function EditGroundStationDialog({
 
 interface EditRequestorDialogProps {
   busy: boolean;
+  darkMode: boolean;
   groundStations: GroundStation[];
   onClose: () => void;
   onSave: (payload: { name: string; ground_station_id: string }) => Promise<void>;
@@ -1243,6 +1271,7 @@ function EditRequestorDialog({
   onClose,
   onSave,
   busy,
+  darkMode,
 }: EditRequestorDialogProps) {
   const [name, setName] = useState("");
   const [groundStationId, setGroundStationId] = useState("");
@@ -1256,7 +1285,12 @@ function EditRequestorDialog({
   }, [requestor]);
 
   return (
-    <Dialog isOpen={requestor != null} title="Edit Requestor" onClose={onClose}>
+    <Dialog
+      className={`resource-edit-dialog ${darkMode ? Classes.DARK : ""}`}
+      isOpen={requestor != null}
+      title="Edit Requestor"
+      onClose={onClose}
+    >
       <div className="bp6-dialog-body form-stack">
         <FormGroup label="Name">
           <InputGroup value={name} onValueChange={setName} />

@@ -153,6 +153,16 @@ export function App() {
                     <span>Dashboard</span>
                   </span>
                 </NavLink>
+                <NavLink
+                  to="/orbit-track"
+                  className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
+                >
+                  <span className="rail-link__title">
+                    <Icon icon="globe-network" />
+                    <span>Orbit Track</span>
+                  </span>
+                  <span className="rail-link__meta">대한민국 위성 궤도를 추적한다</span>
+                </NavLink>
                 {canAccessSatellites ? (
                   <NavLink
                     to="/satellites"
@@ -165,16 +175,6 @@ export function App() {
                     <span className="rail-link__meta">위성/기지국/요청자를 관리한다</span>
                   </NavLink>
                 ) : null}
-                <NavLink
-                  to="/orbit-track"
-                  className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
-                >
-                  <span className="rail-link__title">
-                    <Icon icon="globe-network" />
-                    <span>Orbit Track</span>
-                  </span>
-                  <span className="rail-link__meta">대한민국 위성 궤도를 추적한다</span>
-                </NavLink>
                 <NavLink
                   to="/performance"
                   className={({ isActive }) => `rail-link ${isActive ? "is-active" : ""}`}
@@ -332,6 +332,7 @@ export function App() {
                   element={
                     canAccessSatellites ? (
                       <SattieSatellitesPage
+                        darkMode={darkMode}
                         satellites={bootstrap.satellites}
                         groundStations={bootstrap.groundStations}
                         requestors={bootstrap.requestors}

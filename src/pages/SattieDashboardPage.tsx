@@ -42,6 +42,7 @@ function getIntent(state: CommandState) {
       return "success";
     case "FAILED":
       return "danger";
+    case "ACCESSING_AOI":
     case "CAPTURING":
       return "warning";
     default:
@@ -72,22 +73,14 @@ export function SattieDashboardPage({ bootstrap, darkMode }: SattieDashboardPage
       capturing: 0,
     };
 
-    const now = Date.now();
-
     for (const command of commands) {
       if (command.state === "DOWNLINK_READY") summary.ready += 1;
       else if (command.state === "FAILED") summary.failed += 1;
       else if (command.state === "QUEUED") summary.queued += 1;
       else if (command.state === "ACKED") summary.acked += 1;
+      else if (command.state === "ACCESSING_AOI") summary.accessingAoi += 1;
       else if (command.state === "CAPTURING") {
-        const capturingSince = Date.parse(command.updated_at);
-        const isAccessingAoi =
-          Number.isFinite(capturingSince) && now - capturingSince < 450;
-        if (isAccessingAoi) {
-          summary.accessingAoi += 1;
-        } else {
-          summary.capturing += 1;
-        }
+        summary.capturing += 1;
       }
     }
 
@@ -112,7 +105,7 @@ export function SattieDashboardPage({ bootstrap, darkMode }: SattieDashboardPage
     const ready = completedCommands.filter((command) => command.state === "DOWNLINK_READY" && command.download_url).length;
     const failed = completedCommands.filter((command) => command.state === "FAILED").length;
     const inProgress = completedCommands.filter((command) =>
-      ["QUEUED", "ACKED", "CAPTURING"].includes(command.state),
+      ["QUEUED", "ACKED", "ACCESSING_AOI", "CAPTURING"].includes(command.state),
     ).length;
     return `Total ${completedCommands.length} commands | Downlink Ready ${ready} | Failed ${failed} | In Progress ${inProgress}`;
   }, [completedCommands]);

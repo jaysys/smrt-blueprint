@@ -398,7 +398,7 @@ async function runCommandPipeline(db, commandId) {
   scheduleStep(db, commandId, 500, async () => {
     await setCommandState(db, commandId, "ACKED", "Uplink ACK received from satellite");
 
-    scheduleStep(db, commandId, 500, async () => {
+    scheduleStep(db, commandId, 450, async () => {
       const acked = await getCommandRow(db, commandId);
       if (!acked) {
         return;
@@ -409,58 +409,72 @@ async function runCommandPipeline(db, commandId) {
         return;
       }
 
-      await setCommandState(db, commandId, "CAPTURING", "Satellite is capturing image");
+      await setCommandState(db, commandId, "ACCESSING_AOI", "Satellite is accessing the target AOI");
 
-      scheduleStep(db, commandId, 900, async () => {
-        const capturing = await getCommandRow(db, commandId);
-        if (!capturing) {
+      scheduleStep(db, commandId, 3000 + Math.floor(Math.random() * 3001), async () => {
+        const accessing = await getCommandRow(db, commandId);
+        if (!accessing) {
           return;
         }
 
-        if (Math.random() < capturing.fail_probability * 0.4) {
-          await setCommandState(db, commandId, "FAILED", "Capture aborted due to onboard condition");
+        if (Math.random() < accessing.fail_probability * 0.2) {
+          await setCommandState(db, commandId, "FAILED", "AOI access window expired before capture");
           return;
         }
 
-        const activeSatellite = await getSatelliteRow(db, capturing.satellite_id);
-        if (!activeSatellite) {
-          await setCommandState(db, commandId, "FAILED", "Satellite not found");
-          return;
-        }
+        await setCommandState(db, commandId, "CAPTURING", "Satellite is capturing image");
 
-        const imagePath = buildImageFilePath(commandId);
-        const requestProfile = parseJson(capturing.request_profile_json, {});
-        const generationMode = requestProfile?.generation?.mode ?? "INTERNAL";
-        if (generationMode === "EXTERNAL") {
-          await writeExternalMapImage(imagePath, getExternalMapGenerationOptions(capturing));
-        } else if (activeSatellite.type === "SAR") {
-          writeSarImage(imagePath, capturing.width, capturing.height);
-        } else {
-          writeOpticalImage(imagePath, capturing.width, capturing.height);
-        }
-        const footerCenter = getRequestProfileCenter(requestProfile);
-        await appendImageMetadataFooter(imagePath, {
-          satellite: activeSatellite.name || activeSatellite.satellite_id,
-          missionName: capturing.mission_name,
-          aoiName: capturing.aoi_name,
-          latLon: formatLatLon(footerCenter),
-          groundStation: requestProfile?.ground_station?.name ?? null,
-          requestor: requestProfile?.requestor?.name ?? null,
+        scheduleStep(db, commandId, 900, async () => {
+          const capturing = await getCommandRow(db, commandId);
+          if (!capturing) {
+            return;
+          }
+
+          if (Math.random() < capturing.fail_probability * 0.4) {
+            await setCommandState(db, commandId, "FAILED", "Capture aborted due to onboard condition");
+            return;
+          }
+
+          const activeSatellite = await getSatelliteRow(db, capturing.satellite_id);
+          if (!activeSatellite) {
+            await setCommandState(db, commandId, "FAILED", "Satellite not found");
+            return;
+          }
+
+          const imagePath = buildImageFilePath(commandId);
+          const requestProfile = parseJson(capturing.request_profile_json, {});
+          const generationMode = requestProfile?.generation?.mode ?? "INTERNAL";
+          if (generationMode === "EXTERNAL") {
+            await writeExternalMapImage(imagePath, getExternalMapGenerationOptions(capturing));
+          } else if (activeSatellite.type === "SAR") {
+            writeSarImage(imagePath, capturing.width, capturing.height);
+          } else {
+            writeOpticalImage(imagePath, capturing.width, capturing.height);
+          }
+          const footerCenter = getRequestProfileCenter(requestProfile);
+          await appendImageMetadataFooter(imagePath, {
+            satellite: activeSatellite.name || activeSatellite.satellite_id,
+            missionName: capturing.mission_name,
+            aoiName: capturing.aoi_name,
+            latLon: formatLatLon(footerCenter),
+            groundStation: requestProfile?.ground_station?.name ?? null,
+            requestor: requestProfile?.requestor?.name ?? null,
+          });
+
+          const acquisitionMetadata = buildAcquisitionMetadata(activeSatellite, capturing);
+          const productMetadata = buildProductMetadata(activeSatellite, capturing);
+          await setCommandState(
+            db,
+            commandId,
+            "DOWNLINK_READY",
+            `Image archived to ${imagePath} and ready for download access`,
+            {
+            imagePath,
+            acquisitionMetadataJson: JSON.stringify(acquisitionMetadata),
+            productMetadataJson: JSON.stringify(productMetadata),
+            },
+          );
         });
-
-        const acquisitionMetadata = buildAcquisitionMetadata(activeSatellite, capturing);
-        const productMetadata = buildProductMetadata(activeSatellite, capturing);
-        await setCommandState(
-          db,
-          commandId,
-          "DOWNLINK_READY",
-          `Image archived to ${imagePath} and ready for download access`,
-          {
-          imagePath,
-          acquisitionMetadataJson: JSON.stringify(acquisitionMetadata),
-          productMetadataJson: JSON.stringify(productMetadata),
-          },
-        );
       });
     });
   });
@@ -471,7 +485,7 @@ async function normalizeInFlightCommands(db) {
     db,
     `UPDATE sattie_commands
      SET state = ?, message = ?, updated_at = ?
-     WHERE state IN ('QUEUED', 'ACKED', 'CAPTURING')`,
+     WHERE state IN ('QUEUED', 'ACKED', 'ACCESSING_AOI', 'CAPTURING')`,
     ["FAILED", "Server restarted during processing. Retry is required.", nowIso()],
   );
 }
@@ -963,7 +977,7 @@ export async function getCommand(db, commandId) {
 
 export async function rerunCommand(db, commandId) {
   const current = await getCommand(db, commandId);
-  if (["QUEUED", "ACKED", "CAPTURING"].includes(current.state)) {
+  if (["QUEUED", "ACKED", "ACCESSING_AOI", "CAPTURING"].includes(current.state)) {
     throw new HttpError(409, "Command is already in progress");
   }
   if (current.state !== "FAILED") {

@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Button, Callout, Card, Collapse, HTMLTable, InputGroup, Spinner, Switch, Tag } from "@blueprintjs/core";
+import { Button, Callout, Card, Collapse, HTMLTable, Icon, InputGroup, Spinner, Switch, Tag } from "@blueprintjs/core";
 import { PanelTitle } from "../components/PanelTitle";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { getCommand, getCommands, rerunCommand } from "../lib/sattieApi";
 import type { CommandState, CommandStatus, Satellite } from "../sattie-types";
 
-type TimelineStepId = CommandState | "ACCESSING_AOI";
-
-const TIMELINE_STEPS: Array<{ id: TimelineStepId; label: string }> = [
-  { id: "ACKED", label: "ACKED" },
-  { id: "QUEUED", label: "QUEUED" },
-  { id: "ACCESSING_AOI", label: "Accessing AOI" },
-  { id: "CAPTURING", label: "CAPTURING" },
-  { id: "DOWNLINK_READY", label: "DOWNLINK_READY" },
-  { id: "FAILED", label: "FAILED" },
+const TIMELINE_STEPS: Array<{ id: CommandState; label: string; icon: string }> = [
+  { id: "ACKED", label: "ACKED", icon: "endorsed" },
+  { id: "QUEUED", label: "QUEUED", icon: "time" },
+  { id: "ACCESSING_AOI", label: "Accessing AOI", icon: "satellite" },
+  { id: "CAPTURING", label: "CAPTURING", icon: "camera" },
+  { id: "DOWNLINK_READY", label: "DOWNLINK_READY", icon: "cloud-download" },
 ];
 
 interface SattieCommandsPageProps {
@@ -49,7 +46,7 @@ function isTerminalState(state: CommandState) {
 
 function getTimelineStepStatus(
   selectedCommand: CommandStatus | null,
-  stepId: TimelineStepId,
+  stepId: CommandState,
 ) {
   if (selectedCommand == null) {
     return { active: false, complete: false, failed: false };
@@ -59,13 +56,6 @@ function getTimelineStepStatus(
   const progressIndexByState: Record<CommandState, number> = {
     ACKED: 0,
     QUEUED: 1,
-    CAPTURING: 3,
-    DOWNLINK_READY: 4,
-    FAILED: 5,
-  };
-  const stepIndexById: Record<TimelineStepId, number> = {
-    ACKED: 0,
-    QUEUED: 1,
     ACCESSING_AOI: 2,
     CAPTURING: 3,
     DOWNLINK_READY: 4,
@@ -73,7 +63,7 @@ function getTimelineStepStatus(
   };
 
   const currentIndex = progressIndexByState[currentState];
-  const failed = currentState === "FAILED" && stepId === "FAILED";
+  const failed = currentState === "FAILED" && stepId === "CAPTURING";
 
   if (currentState === "DOWNLINK_READY") {
     return {
@@ -86,16 +76,13 @@ function getTimelineStepStatus(
   if (currentState === "FAILED") {
     return {
       active: false,
-      complete: false,
+      complete: stepId !== "DOWNLINK_READY" && stepId !== "CAPTURING",
       failed,
     };
   }
 
-  const stepIndex = stepIndexById[stepId];
-  const active = (
-    (stepId === currentState) ||
-    (currentState === "CAPTURING" && stepId === "ACCESSING_AOI")
-  );
+  const stepIndex = progressIndexByState[stepId];
+  const active = stepId === currentState;
   const complete =
     !active &&
     !failed &&
@@ -338,6 +325,7 @@ export function SattieCommandsPage({ onDataChange, satellites }: SattieCommandsP
             <div className="timeline">
               {TIMELINE_STEPS.map((step) => {
                 const { active, complete, failed } = getTimelineStepStatus(selectedCommand, step.id);
+                const statusText = failed ? "Interrupted" : step.id === "DOWNLINK_READY" ? "Passed" : "Waiting";
 
                 return (
                   <span
@@ -345,7 +333,13 @@ export function SattieCommandsPage({ onDataChange, satellites }: SattieCommandsP
                     key={step.id}
                     className={`timeline__step ${active ? "is-active" : ""} ${complete ? "is-complete" : ""} ${failed ? "is-failed" : ""}`}
                   >
-                    {step.label}
+                    <span className="timeline__step-icon">
+                      <Icon icon={step.icon as never} />
+                    </span>
+                    <span className="timeline__step-copy">
+                      <span className="timeline__step-label">{step.label}</span>
+                      <span className="timeline__step-status">{statusText}</span>
+                    </span>
                   </span>
                 );
               })}
@@ -532,6 +526,7 @@ function getStateIntent(state: CommandStatus["state"]) {
     case "FAILED":
       return "danger";
     case "CAPTURING":
+    case "ACCESSING_AOI":
       return "warning";
     default:
       return "primary";
