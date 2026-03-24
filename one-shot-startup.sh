@@ -10,6 +10,7 @@ LOG_FILE="$PID_DIR/${APP_NAME_SAFE}.log"
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-6005}"
 DEPS_STAMP_FILE="$ROOT_DIR/node_modules/.deps-stamp"
+BUILD_STAMP_FILE="$ROOT_DIR/dist/.build-stamp"
 
 compute_deps_stamp() {
   if command -v sha256sum >/dev/null 2>&1; then
@@ -25,6 +26,33 @@ compute_deps_stamp() {
   node -e "const fs=require('fs');const crypto=require('crypto');const hash=crypto.createHash('sha256');hash.update(fs.readFileSync(process.argv[1]));hash.update(fs.readFileSync(process.argv[2]));process.stdout.write(hash.digest('hex'));" "$ROOT_DIR/package.json" "$ROOT_DIR/package-lock.json"
 }
 
+compute_build_stamp() {
+  local hasher_command
+  if command -v sha256sum >/dev/null 2>&1; then
+    hasher_command="sha256sum"
+  elif command -v shasum >/dev/null 2>&1; then
+    hasher_command="shasum -a 256"
+  else
+    node -e "const fs=require('fs');const path=require('path');const crypto=require('crypto');const root=process.argv[1];const hash=crypto.createHash('sha256');const include=new Set(['.js','.jsx','.ts','.tsx','.css','.html','.json']);const roots=['src','server'];const files=[];for(const rel of roots){const abs=path.join(root,rel);if(!fs.existsSync(abs)) continue;const stack=[abs];while(stack.length){const current=stack.pop();for(const entry of fs.readdirSync(current,{withFileTypes:true})){const next=path.join(current,entry.name);if(entry.isDirectory()){stack.push(next);continue;}if(include.has(path.extname(entry.name))){files.push(path.relative(root,next));}}}}for(const rel of ['index.html','package.json','package-lock.json','tsconfig.json','tsconfig.app.json','tsconfig.node.json','vite.config.ts']){if(fs.existsSync(path.join(root,rel))){files.push(rel);}}files.sort();for(const rel of files){hash.update(rel);hash.update(fs.readFileSync(path.join(root,rel)));}process.stdout.write(hash.digest('hex'));" "$ROOT_DIR"
+    return
+  fi
+
+  (
+    cd "$ROOT_DIR"
+    {
+      find src server -type f \( -name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" -o -name "*.css" -o -name "*.html" -o -name "*.json" \) 2>/dev/null
+      for file in index.html package.json package-lock.json tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts; do
+        if [[ -f "$file" ]]; then
+          printf '%s\n' "$file"
+        fi
+      done
+    } | LC_ALL=C sort | while IFS= read -r file; do
+      [[ -n "$file" ]] || continue
+      $hasher_command "$file"
+    done | $hasher_command | awk '{print $1}'
+  )
+}
+
 mkdir -p "$PID_DIR"
 
 if [[ ! -d "$ROOT_DIR/node_modules" ]]; then
@@ -35,6 +63,8 @@ fi
 
 CURRENT_DEPS_STAMP="$(compute_deps_stamp)"
 INSTALLED_DEPS_STAMP="$(cat "$DEPS_STAMP_FILE" 2>/dev/null || true)"
+CURRENT_BUILD_STAMP="$(compute_build_stamp)"
+INSTALLED_BUILD_STAMP="$(cat "$BUILD_STAMP_FILE" 2>/dev/null || true)"
 
 if [[ "$CURRENT_DEPS_STAMP" != "$INSTALLED_DEPS_STAMP" ]]; then
   echo "[INFO] dependency manifest changed. installing updated dependencies..."
@@ -46,12 +76,14 @@ if [[ "$CURRENT_DEPS_STAMP" != "$INSTALLED_DEPS_STAMP" ]]; then
   printf '%s\n' "$CURRENT_DEPS_STAMP" > "$DEPS_STAMP_FILE"
 fi
 
-if [[ ! -f "$ROOT_DIR/dist/index.html" ]]; then
-  echo "[INFO] dist not found. building first..."
+if [[ ! -f "$ROOT_DIR/dist/index.html" || "$CURRENT_BUILD_STAMP" != "$INSTALLED_BUILD_STAMP" ]]; then
+  echo "[INFO] build inputs changed or dist not found. building production bundle..."
   (
     cd "$ROOT_DIR"
     npm run build
   )
+  mkdir -p "$ROOT_DIR/dist"
+  printf '%s\n' "$CURRENT_BUILD_STAMP" > "$BUILD_STAMP_FILE"
 fi
 
 if [[ -f "$PID_FILE" ]]; then
